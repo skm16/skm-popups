@@ -61,6 +61,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # docs/build-plan.md Phase 1 requires a repository-wide grep asserting that
+      # no regex is run against user-supplied patterns. popkit's URL targeting is
+      # a closed four-mode match language with a linear matcher precisely because
+      # PHP cannot bound a PCRE match by wall clock — see docs/CLAUDE.md ->
+      # Security -> URL match language.
+      #
+      # The authoritative check is the unit test
+      # tests/php/unit/test-no-regex-invariant.php, which tokenizes each file and
+      # so cannot be fooled by a call spelled unusually. This step is the cheap,
+      # loud duplicate: it needs no PHP, no Composer and no checkout of anything
+      # else, it runs in under a second before the toolchain is installed, and it
+      # names the invariant in the job log instead of hiding it behind a test
+      # method name. It also still fires if the test file is ever deleted.
+      #
+      # Scope is includes/ — every class loaded at runtime — matching the unit
+      # test. Widening it to the repository root would sweep in vendor/,
+      # node_modules/ and the test fixtures that deliberately contain regex calls.
+      #
+      # The second grep drops lines that are wholly a comment, so documenting why
+      # regex is forbidden does not break the build. A guard that punishes
+      # explaining itself gets its explanation deleted.
+      - name: No-regex security invariant (includes/)
+        run: |
+          hits="$(grep -rnE --include='*.php' '(^|[^[:alnum:]_$>])(preg_[a-z_]+|fnmatch|ereg|eregi|ereg_replace|eregi_replace|mb_ereg[a-z_]*)[[:space:]]*\(' includes/ | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(\*|//|#|/\*)' || true)"
+          if [ -n "$hits" ]; then
+            echo "::error::A regex function is called under includes/. popkit accepts no user-supplied regular expressions: PHP cannot bound a PCRE match by wall clock, so URL targeting uses the constrained match language in docs/CLAUDE.md -> Security -> URL match language. Extend Popkit\\Url_Matcher instead."
+            echo "$hits"
+            exit 1
+          fi
+          echo "No regex calls under includes/. The no-regex invariant holds."
+
       - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:

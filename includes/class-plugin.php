@@ -19,10 +19,24 @@ defined( 'ABSPATH' ) || exit;
  * unambiguously idempotent when a caller loads the plugin file twice. Subsystems
  * added in later phases keep their own state; nothing hangs off this object.
  *
- * Phase 0 boots the text domain, the settings registration and the self-heal
- * hook, and nothing else. The extension points below are
- * named and documented so later phases have one obvious place to attach, and so
+ * Phase 1 adds the public registry accessors, the `popkit_popup` post type, its
+ * meta keys and the registry REST route. Each is attached through the extension
+ * point named for it below, so later phases have one obvious place to attach and
  * a reviewer can tell an unfinished phase from a missing one.
+ *
+ * Every subsystem is handed its own `init()` and left to choose the hook and
+ * priority it needs. This class decides *what* is booted and in *what order*; it
+ * does not decide when a post type registers or which hook a REST route hangs
+ * off, because those belong with the code that would have to change if they were
+ * wrong.
+ *
+ * `boot()` names no class from a phase that has not been built, so the two
+ * remaining extension points are empty rather than defensive. There is
+ * deliberately no `class_exists()` guard around the Phase 1 classes either: they
+ * are first-party files resolved by the same autoloader that already resolved
+ * this one, so a missing one means a broken install, and guarding it would turn
+ * that into a silent no-op — the failure mode
+ * {@see Activator::assign_capabilities()} was changed to stop producing.
  *
  * @since 0.1.0
  */
@@ -126,8 +140,16 @@ final class Plugin {
 			add_action( 'admin_init', array( Activator::class, 'maybe_upgrade' ) );
 		}
 
-		$this->boot_data_model();
+		/*
+		 * The registries are booted first because boot_registries() is what makes
+		 * popkit_conditions() and popkit_triggers() callable at all, and both the
+		 * meta sanitizers and the REST route resolve rule types through them.
+		 * Nothing below calls either accessor during boot — see the note on
+		 * boot_registries() about why forcing one open here would lose
+		 * registrations — so the ordering costs nothing and removes the question.
+		 */
 		$this->boot_registries();
+		$this->boot_data_model();
 		$this->boot_rest();
 		$this->boot_frontend();
 		$this->boot_admin();
@@ -145,48 +167,97 @@ final class Plugin {
 	}
 
 	/**
-	 * Extension point: post type and meta registration.
-	 *
-	 * Phase 1 attaches the `popkit_popup` post type and the `_popkit_*` meta
-	 * keys here, each with an explicit REST schema and auth callback. Nothing is
-	 * registered in Phase 0.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return void
-	 */
-	private function boot_data_model(): void {
-		/* Intentionally empty until Phase 1. */
-	}
-
-	/**
 	 * Extension point: condition and trigger registries.
 	 *
-	 * Phase 1 constructs the two registries and fires
-	 * `popkit_register_conditions` / `popkit_register_triggers` here. Phase 4
-	 * registers the built-in conditions against them.
+	 * Loads the plugin's public accessor functions and registers nothing else.
+	 * Phase 1 ships no built-in conditions or triggers — those arrive alongside
+	 * the front-end runtime in Phases 3 and 4 — so both registries start empty and
+	 * are filled by whoever hooks `popkit_register_conditions` or
+	 * `popkit_register_triggers`.
+	 *
+	 * `includes/functions.php` declares `popkit_conditions()` and
+	 * `popkit_triggers()` in the global namespace, which means it declares no
+	 * class. Composer's autoloader for this plugin is a classmap over `includes/`
+	 * and the fallback autoloader in `popkit.php` resolves `Popkit\`-prefixed
+	 * class names to a file path, so neither loader can ever reach a file that
+	 * defines only functions. An explicit require is the only thing that brings
+	 * popkit's public API into existence.
+	 *
+	 * The require is unguarded on purpose, for the reason given on the class:
+	 * a shipped first-party file that is absent means a broken install, and a
+	 * `file_exists()` check would defer the failure to whichever extension calls
+	 * `popkit_conditions()` first, somewhere far less obvious.
+	 *
+	 * Neither accessor is called here, and that is the load-bearing part. Each
+	 * builds its registry lazily and dispatches its registration action exactly
+	 * once, tied to construction rather than to the call. Forcing one open on
+	 * `plugins_loaded` would fire `popkit_register_conditions` before a callback
+	 * added by a theme, or on `init`, or by any plugin that loads after popkit,
+	 * had been attached — and those registrations would then be silently dropped,
+	 * because the action never fires a second time. Leaving construction to the
+	 * first genuine consumer is what keeps every documented registration point
+	 * working.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return void
 	 */
 	private function boot_registries(): void {
-		/* Intentionally empty until Phase 1. */
+		require_once POPKIT_DIR . 'includes/functions.php';
+	}
+
+	/**
+	 * Extension point: post type and meta registration.
+	 *
+	 * Registers the `popkit_popup` post type and the `_popkit_*` meta keys, each
+	 * with an explicit REST schema and auth callback.
+	 *
+	 * Both subsystems attach themselves to `init` rather than being hooked from
+	 * here, so the hook and priority each one needs stay with the code that needs
+	 * them. Both `init()` calls run on `plugins_loaded`, which always precedes
+	 * `init`.
+	 *
+	 * The order of the two calls is meaningful. Callbacks added to one hook at one
+	 * priority run in the order they were added, so registering the post type
+	 * first means `register_post_meta()` always runs against a post type
+	 * WordPress already knows: the `auth_callback` on every key resolves
+	 * `edit_post` through `map_meta_cap()`, and that resolution needs the
+	 * capability map declared at post type registration. Reversing these two lines
+	 * would leave the meta keys authorised against core's `post` capabilities
+	 * instead, which fails open for anyone holding `edit_posts`.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return void
+	 */
+	private function boot_data_model(): void {
+		Post_Type::init();
+		Meta::init();
 	}
 
 	/**
 	 * Extension point: REST routes.
 	 *
-	 * Phase 1 attaches the registry schema route. Phase 2 attaches
-	 * `GET /popkit/v1/context`, whose public permission callback is the one
-	 * documented exception in `CLAUDE.md`.
+	 * `Rest_Schema::init()` attaches `GET /popkit/v1/registry` to `rest_api_init`
+	 * behind a capability check. That route is what lets the block editor render a
+	 * working control for a condition it has never heard of, which is the registry
+	 * invariant in `CLAUDE.md` that keeps registering a condition a PHP-only act.
+	 *
+	 * It is also the first genuine consumer of the two registries, so it is the
+	 * call that ordinarily constructs them and fires the registration actions —
+	 * see boot_registries().
+	 *
+	 * Phase 2 attaches `GET /popkit/v1/context`, whose public permission callback
+	 * is the one documented exception in `CLAUDE.md`. It is deliberately not
+	 * stubbed here: a route that exists but answers nothing is worse than one that
+	 * does not exist.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return void
 	 */
 	private function boot_rest(): void {
-		/* Intentionally empty until Phase 1. */
+		Rest_Schema::init();
 	}
 
 	/**

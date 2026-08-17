@@ -226,6 +226,23 @@ if ( ! function_exists( 'is_wp_error' ) ) {
 	}
 }
 
+if ( ! function_exists( 'do_action' ) ) {
+	/**
+	 * Fire an action hook.
+	 *
+	 * Deliberately a no-op. There is no hook system without WordPress, and a
+	 * plugin file that dispatches an action during construction — includes/
+	 * functions.php builds each registry then fires its registration hook — must
+	 * still be loadable here. Unit tests populate the registries by calling
+	 * register() directly rather than by hooking, so nothing is lost.
+	 *
+	 * @param string $hook_name Name of the action.
+	 * @param mixed  ...$args   Arguments passed to the callbacks.
+	 * @return void
+	 */
+	function do_action( $hook_name, ...$args ) {}
+}
+
 if ( ! function_exists( 'wp_parse_args' ) ) {
 	/**
 	 * Merge user-defined arguments into defaults.
@@ -249,5 +266,151 @@ if ( ! function_exists( 'wp_parse_args' ) ) {
 		}
 
 		return $parsed;
+	}
+}
+
+if ( ! class_exists( 'WP_Error', false ) ) {
+	/**
+	 * Stand-in for core's error container.
+	 *
+	 * This is a class rather than a function, which is the one exception to the
+	 * "functions only" shape of this file. It has to be here: several pure-logic
+	 * classes report refusals by returning a WP_Error, so without it the unit
+	 * suite cannot exercise a single rejection path.
+	 *
+	 * Only the accessors those classes and their tests touch are implemented, and
+	 * they follow core's contract exactly — an empty `$code` means "the first
+	 * error registered", and `get_error_data()` returns null when nothing was
+	 * stored. Anything relying on core's richer behaviour (merging, removal,
+	 * WP_Error passed through filters) belongs in the integration suite.
+	 *
+	 * Parameters are deliberately untyped, matching core, so that a caller in a
+	 * `strict_types` file and one without behave the same way against it.
+	 */
+	class WP_Error {
+
+		/**
+		 * Messages, keyed by error code.
+		 *
+		 * @var array<string, string[]>
+		 */
+		public $errors = array();
+
+		/**
+		 * The most recent data value, keyed by error code.
+		 *
+		 * @var array<string, mixed>
+		 */
+		public $error_data = array();
+
+		/**
+		 * Register an initial error, when one is supplied.
+		 *
+		 * @param string|int $code    Error code.
+		 * @param string     $message Error message.
+		 * @param mixed      $data    Optional. Error data.
+		 */
+		public function __construct( $code = '', $message = '', $data = '' ) {
+			if ( '' === $code ) {
+				return;
+			}
+
+			$this->add( $code, $message, $data );
+		}
+
+		/**
+		 * Add an error message to the container.
+		 *
+		 * @param string|int $code    Error code.
+		 * @param string     $message Error message.
+		 * @param mixed      $data    Optional. Error data.
+		 * @return void
+		 */
+		public function add( $code, $message = '', $data = '' ) {
+			$this->errors[ $code ][] = $message;
+
+			if ( '' !== $data ) {
+				$this->error_data[ $code ] = $data;
+			}
+		}
+
+		/**
+		 * Retrieve every registered error code.
+		 *
+		 * @return array<int, string|int>
+		 */
+		public function get_error_codes() {
+			return array_keys( $this->errors );
+		}
+
+		/**
+		 * Retrieve the first registered error code.
+		 *
+		 * @return string|int Empty string when no error is registered.
+		 */
+		public function get_error_code() {
+			$codes = $this->get_error_codes();
+
+			return $codes ? $codes[0] : '';
+		}
+
+		/**
+		 * Retrieve every message registered against a code.
+		 *
+		 * @param string|int $code Optional. Error code. Defaults to the first code.
+		 * @return string[]
+		 */
+		public function get_error_messages( $code = '' ) {
+			if ( '' === $code ) {
+				$all = array();
+
+				foreach ( $this->errors as $messages ) {
+					$all = array_merge( $all, $messages );
+				}
+
+				return $all;
+			}
+
+			return $this->errors[ $code ] ?? array();
+		}
+
+		/**
+		 * Retrieve the first message registered against a code.
+		 *
+		 * @param string|int $code Optional. Error code. Defaults to the first code.
+		 * @return string Empty string when the code carries no message.
+		 */
+		public function get_error_message( $code = '' ) {
+			if ( '' === $code ) {
+				$code = $this->get_error_code();
+			}
+
+			$messages = $this->get_error_messages( $code );
+
+			return $messages ? $messages[0] : '';
+		}
+
+		/**
+		 * Retrieve the data stored against a code.
+		 *
+		 * @param string|int $code Optional. Error code. Defaults to the first code.
+		 * @return mixed Null when the code carries no data.
+		 */
+		public function get_error_data( $code = '' ) {
+			if ( '' === $code ) {
+				$code = $this->get_error_code();
+			}
+
+			return $this->error_data[ $code ] ?? null;
+		}
+
+		/**
+		 * Whether any error is registered.
+		 *
+		 * @return bool
+		 */
+		public function has_errors() {
+			return array() !== $this->errors;
+		}
 	}
 }

@@ -241,6 +241,21 @@ final class Test_Popkit_Uninstall extends WP_UnitTestCase {
 	/**
 	 * Popup meta survives the default uninstall.
 	 *
+	 * What is guarded here is that a default uninstall does not remove authored
+	 * meta — not that it is stored byte for byte as it was handed over. The
+	 * fixture seeds `array( 'layout' => 'modal' )` and the registered
+	 * `sanitize_callback` correctly fills in the rest of the documented defaults
+	 * from `docs/data-model.md` -> Display, so the authored value is normalised on
+	 * *write*, long before uninstall runs. The byte-identical requirement in
+	 * `docs/CLAUDE.md` is about the `values` of an unknown rule type, which has no
+	 * declared schema to normalise against; registered meta that does have one is
+	 * a different contract.
+	 *
+	 * Existence is therefore asserted with metadata_exists() rather than inferred
+	 * from what get_post_meta() returns. A registered key carries a default, and
+	 * get_post_meta() serves that default for a row that is no longer there — so
+	 * reading the value alone would report a deleted row as an intact one.
+	 *
 	 * @return void
 	 */
 	public function test_uninstall_leaves_popup_meta_intact_by_default() {
@@ -251,15 +266,36 @@ final class Test_Popkit_Uninstall extends WP_UnitTestCase {
 		$this->run_uninstall();
 
 		foreach ( $fixture['popups'] as $label => $post_id ) {
+			$this->assertTrue(
+				metadata_exists( 'post', $post_id, '_popkit_display' ),
+				sprintf( 'The display meta row for the %s popup was deleted by an uninstall that was never opted in to. Authored content is not plugin infrastructure.', $label )
+			);
+
+			$display = get_post_meta( $post_id, '_popkit_display', true );
+
+			$this->assertIsArray(
+				$display,
+				sprintf( 'Display meta for the %s popup no longer reads as an object after a default uninstall.', $label )
+			);
+			$this->assertNotSame(
+				array(),
+				$display,
+				sprintf( 'Display meta for the %s popup was emptied by a default uninstall.', $label )
+			);
 			$this->assertSame(
-				array( 'layout' => 'modal' ),
-				get_post_meta( $post_id, '_popkit_display', true ),
-				sprintf( 'Display meta was removed from the %s popup by a default uninstall.', $label )
+				'modal',
+				$display['layout'] ?? null,
+				sprintf( 'The authored layout was lost from the %s popup by a default uninstall. Sanitization fills in the other documented display defaults on write; it never rewrites what the author chose.', $label )
+			);
+
+			$this->assertTrue(
+				metadata_exists( 'post', $post_id, '_popkit_schema_version' ),
+				sprintf( 'The schema version meta row for the %s popup was deleted by a default uninstall. Without it a reinstall reads the popup as version 1 and reruns migrations that already ran.', $label )
 			);
 			$this->assertSame(
 				1,
 				(int) get_post_meta( $post_id, '_popkit_schema_version', true ),
-				sprintf( 'Schema version meta was removed from the %s popup by a default uninstall.', $label )
+				sprintf( 'Schema version meta on the %s popup changed value during a default uninstall.', $label )
 			);
 		}
 	}
