@@ -113,6 +113,21 @@ final class Activator {
 			return;
 		}
 
+		/*
+		 * Healing is admin-screen work. This method is public and therefore
+		 * callable directly, so the guard cannot live only at the hook site in
+		 * Plugin::boot() — admin-post.php fires `admin_init` too, and any other
+		 * caller bypasses that guard entirely.
+		 *
+		 * `is_admin()` is true on admin-ajax.php, so it does not exclude Ajax on
+		 * its own; rewriting every role in the middle of an arbitrary Ajax
+		 * handler, including a third party's `nopriv` one, is not something the
+		 * caller asked for. Both halves are required.
+		 */
+		if ( ! is_admin() || wp_doing_ajax() ) {
+			return;
+		}
+
 		if ( ! current_user_can( 'activate_plugins' ) ) {
 			return;
 		}
