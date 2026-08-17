@@ -1,0 +1,282 @@
+name: CI
+
+# Every `run:` step below uses the runner default shell (`bash -e {0}`), so a
+# non-zero exit from any command fails the step and therefore the whole job.
+# Nothing here swallows an exit code with `|| true`.
+#
+# Between them the jobs run all six verification commands from docs/CLAUDE.md:
+#
+#   composer run lint     -> php job
+#   composer run test     -> integration job (composite, inside wp-env)
+#   npm run lint          -> js job
+#   npm run test:e2e      -> e2e job
+#   npm run size          -> js job
+#   npm run plugin-check  -> plugin-check job
+
+on:
+  push:
+  pull_request:
+
+# Cancel superseded runs: only the newest commit on a ref is worth building.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+  # The repository root IS the plugin root, so every job checks out at the
+  # workspace root and all paths below are repo-root-relative.
+  #
+  # The checkout directory is named after the repository, not after the plugin
+  # slug, and `@wordpress/env` derives the in-container folder of a `plugins`
+  # entry from the host directory's basename. `.wp-env.json` therefore mounts
+  # the project with a `mappings` entry instead:
+  #
+  #   "mappings": { "wp-content/plugins/popkit": "." }
+  #
+  # `mappings` names the container path outright, so the plugin always lands at
+  # wp-content/plugins/popkit regardless of what the host folder is called, and
+  # the value below is stable. `mappings` does not activate what it mounts, so
+  # `.wp-env.json` also carries a `lifecycleScripts.afterStart` hook that runs
+  # `wp plugin activate popkit` against both the `cli` and `tests-cli`
+  # containers. Change this variable only if that mapping key changes.
+  POPKIT_WP_ENV_PLUGIN_PATH: wp-content/plugins/popkit
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.1 is the declared minimum; 8.3 is the forward-compatibility guard.
+        php: ['8.1', '8.3']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+          ini-values: error_reporting=E_ALL, display_errors=On
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ runner.os }}-php${{ matrix.php }}-${{ hashFiles('composer.json', 'composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php${{ matrix.php }}-
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Lint (PHPCS, WordPress ruleset)
+        run: composer run lint
+
+      # Unit tests run WITHOUT WordPress by design: no wp-env, no database, no
+      # bootstrap of core. This is the `test:unit` half of `composer run test`,
+      # run here across the whole supported PHP range. The composite script
+      # itself is exercised in the `integration` job.
+      - name: Unit tests (no WordPress)
+        run: composer run test:unit
+
+  js:
+    name: JavaScript
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Lint (ESLint + Stylelint)
+        run: npm run lint
+
+      # Both steps are gated on `src/` actually existing so the workflow is
+      # honest about what it verified: with no sources there is nothing to
+      # bundle and nothing to weigh, and a skipped step says so where a passing
+      # step would lie. Once `src/` is populated the gate is always true.
+      - name: Build
+        if: hashFiles('src/**') != ''
+        run: npm run build
+
+      # Runs after `build` on purpose: size-limit asserts the gzipped budgets in
+      # docs/CLAUDE.md against real artifacts in dist/.
+      - name: Bundle size budgets
+        if: hashFiles('src/**') != ''
+        run: npm run size
+
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Not gated on `src/**`: an e2e run against a missing or stale bundle is
+      # worse than no e2e run at all, because it reports green while testing
+      # nothing. The plugin enqueues from dist/, so dist/ must be current
+      # before WordPress is started.
+      - name: Build
+        run: npm run build
+
+      - name: Start WordPress (wp-env, Docker)
+        run: npm run env:start
+
+      # The exit criterion in docs/build-plan.md Phase 0 is "activates with no
+      # notices at WP_DEBUG = true". `.wp-env.json` sets WP_DEBUG_DISPLAY false
+      # and WP_DEBUG_LOG true, so notices land in a file instead of a response
+      # body; without this step nothing would ever read that file. A non-empty
+      # debug.log after boot and activation fails the job. Note that the
+      # bundled Plugin Check plugin is active too, so anything it logs fails
+      # the job as well — that strictness is deliberate.
+      - name: Fail if anything was written to debug.log
+        run: |
+          npx wp-env run cli -- sh -c 'if [ -s wp-content/debug.log ]; then echo "::error::PHP notices were logged during startup or activation:"; cat wp-content/debug.log; exit 1; fi; echo "debug.log is empty."'
+
+      - name: Run Playwright suite
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Stop WordPress
+        if: always()
+        run: npm run env:stop
+
+  plugin-check:
+    name: Plugin Check (WP.org)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      # Plugin Check inspects what would actually ship, which includes the
+      # built assets in dist/. Running it against an unbuilt tree would check a
+      # different plugin from the one submitted to WP.org.
+      - name: Build
+        run: npm run build
+
+      - name: Start WordPress (wp-env, Docker)
+        run: npm run env:start
+
+      - name: Fail if anything was written to debug.log
+        run: |
+          npx wp-env run cli -- sh -c 'if [ -s wp-content/debug.log ]; then echo "::error::PHP notices were logged during startup or activation:"; cat wp-content/debug.log; exit 1; fi; echo "debug.log is empty."'
+
+      # `npm run plugin-check` shells into wp-env and runs the Plugin Check
+      # plugin against ${{ env.POPKIT_WP_ENV_PLUGIN_PATH }}, propagating its
+      # exit code. Zero errors and zero warnings is the release bar.
+      - name: Plugin Check
+        run: npm run plugin-check
+
+      - name: Stop WordPress
+        if: always()
+        run: npm run env:stop
+
+  integration:
+    name: PHPUnit (integration, wp-env)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+          tools: composer:v2
+
+      # vendor/ is installed on the host and mounted into the container, so it
+      # must be resolved against the minimum supported PHP.
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Start WordPress (wp-env, Docker)
+        run: npm run env:start
+
+      - name: Fail if anything was written to debug.log
+        run: |
+          npx wp-env run tests-cli -- sh -c 'if [ -s wp-content/debug.log ]; then echo "::error::PHP notices were logged during startup or activation:"; cat wp-content/debug.log; exit 1; fi; echo "debug.log is empty."'
+
+      # This runs the composite `composer run test` script verbatim rather than
+      # only its `test:integration` half, so the script a developer actually
+      # types is the script CI exercises. Composer is installed in every wp-env
+      # container, so no host-side PHP is involved here.
+      #
+      # `--` separates wp-env's own flags from the command executed in the
+      # container. `--env-cwd` puts Composer in the plugin directory so it finds
+      # composer.json, phpunit.xml.dist and the mounted vendor/.
+      #
+      # The `test:unit` half therefore runs twice in CI: here under the
+      # container's PHP, and in the `php` job against both 8.1 and 8.3. That
+      # duplication is what makes the composite verifiable; the PHP matrix is
+      # what makes the unit suite version-proof.
+      - name: Run the full suite (composer run test)
+        run: npx wp-env run tests-cli --env-cwd="$POPKIT_WP_ENV_PLUGIN_PATH" -- composer run test
+
+      - name: Stop WordPress
+        if: always()
+        run: npm run env:stop

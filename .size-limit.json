@@ -1,0 +1,14 @@
+[
+	{
+		"name": "frontend js",
+		"path": "dist/frontend.js",
+		"limit": "8 KB",
+		"gzip": true
+	},
+	{
+		"name": "frontend css",
+		"path": "dist/frontend.css",
+		"limit": "4 KB",
+		"gzip": true
+	}
+]

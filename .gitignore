@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+dist/
+build/
+*.zip
+*.tgz
+
+# Local environment
+.wp-env.override.json
+.wp-env*/
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tests
+playwright-report/
+test-results/
+artifacts/
+coverage/
+.phpunit.result.cache
+.phpcs.cache
+
+# Translations - compiled catalogues are built artifacts; the .pot is committed.
+languages/*.mo
+languages/*.l10n.php
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

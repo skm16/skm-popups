@@ -1,0 +1,32 @@
+/**
+ * popkit — frontend stylesheet, bundle entry point for dist/frontend.css.
+ *
+ * Phase 0 ships this file intentionally inert, so that `npm run build` emits
+ * dist/frontend.css and `npm run size` has an artifact to weigh.
+ *
+ * Phase 6 replaces the body with the modal and inline banner layouts and the
+ * three shipped themes plus inherit mode. Nothing here styles anything today.
+ *
+ * Hard constraints on everything that ever lands in this stylesheet
+ * (docs/CLAUDE.md -> Weight, Accessibility):
+ *
+ * - 4 KB gzipped. `npm run size` asserts it against dist/frontend.css.
+ * - Every themeable value is a custom property in the `--popkit-` namespace,
+ *   so a theme is a token set rather than a second stylesheet. Inherit mode
+ *   consumes `--wp--preset--color--*` and `--wp--preset--font-family--*` from
+ *   the active theme.
+ * - Under `prefers-reduced-motion: reduce` animation becomes instant, not
+ *   merely faster.
+ * - Shipped themes meet WCAG 2.2 AA contrast, and the close button keeps its
+ *   44x44 hit area, in every theme and both layouts.
+ */
+
+/*
+ * Placeholder token. It declares the `--popkit-` namespace root and keeps the
+ * built stylesheet non-empty; Phase 6 replaces this block with the real token
+ * set. `initial` substitutes as though the token were unset, so no element is
+ * affected by it.
+ */
+:root {
+	--popkit-placeholder: initial;
+}

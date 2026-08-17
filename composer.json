@@ -1,0 +1,60 @@
+{
+	"name": "popkit/popkit",
+	"description": "Accessible, lean popups for WordPress. Modal and inline banner, built for speed and screen readers.",
+	"type": "wordpress-plugin",
+	"keywords": [
+		"wordpress",
+		"wordpress-plugin",
+		"popup",
+		"modal",
+		"accessibility"
+	],
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.1"
+	},
+	"require-dev": {
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"phpcompatibility/phpcompatibility-wp": "^2.1",
+		"phpunit/phpunit": "^9.6",
+		"squizlabs/php_codesniffer": "^3.9",
+		"wp-coding-standards/wpcs": "^3.1",
+		"yoast/phpunit-polyfills": "^2.0"
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		},
+		"platform": {
+			"php": "8.1"
+		},
+		"sort-packages": true
+	},
+	"autoload": {
+		"classmap": [
+			"includes/"
+		]
+	},
+	"autoload-dev": {
+		"classmap": [
+			"tests/php/"
+		]
+	},
+	"scripts": {
+		"lint": "phpcs",
+		"lint:fix": "phpcbf",
+		"test": [
+			"@test:unit",
+			"@test:integration"
+		],
+		"test:unit": "phpunit --testsuite unit",
+		"test:integration": "phpunit --testsuite integration"
+	},
+	"scripts-descriptions": {
+		"lint": "Check PHP against the WordPress Coding Standards ruleset in phpcs.xml.dist.",
+		"lint:fix": "Auto-fix the PHPCS violations that are safely fixable.",
+		"test": "Run the unit suite, then the integration suite. The integration suite needs WordPress (wp-env or WP_TESTS_DIR).",
+		"test:unit": "Run the pure-logic suite. Needs no WordPress, no database and no Docker.",
+		"test:integration": "Run the WordPress integration suite. Requires WP_TESTS_DIR or WP_PHPUNIT__DIR."
+	}
+}

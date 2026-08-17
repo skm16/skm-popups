@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	PHPUnit configuration for popkit.
+
+	Two suites, one bootstrap:
+
+	  composer run test:unit          runs tests/php/unit
+	  composer run test:integration   runs tests/php/integration
+	  composer run test               runs both, in that order
+
+	`bootstrap` always points at tests/php/bootstrap-unit.php. That file decides
+	which environment to build: when the suite being run is `integration`, either
+	because POPKIT_TEST_SUITE=integration is exported or because the PHPUnit
+	testsuite flag names it, the file hands off to
+	tests/php/bootstrap-integration.php and the WordPress test suite takes over.
+	Otherwise it loads the function stubs and the unit suite runs with no
+	WordPress, no database and no Docker.
+
+	The integration suite therefore needs WP_TESTS_DIR (or WP_PHPUNIT__DIR, or a
+	checkout at %TEMP%/wordpress-tests-lib) to be present. `wp-env` sets this up.
+
+	failOnRisky is on, so a test that asserts nothing fails. Assert something, or
+	call addToAssertionCount() and say why.
+-->
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+	bootstrap="tests/php/bootstrap-unit.php"
+	backupGlobals="false"
+	colors="true"
+	convertDeprecationsToExceptions="false"
+	failOnRisky="true"
+	failOnWarning="true"
+	verbose="true"
+	>
+	<testsuites>
+		<testsuite name="unit">
+			<!-- Both PHPUnit's ClassNameTest.php and WordPress' test-name.php conventions are discovered. -->
+			<directory suffix="Test.php">tests/php/unit</directory>
+			<directory prefix="test-" suffix=".php">tests/php/unit</directory>
+		</testsuite>
+		<testsuite name="integration">
+			<directory suffix="Test.php">tests/php/integration</directory>
+			<directory prefix="test-" suffix=".php">tests/php/integration</directory>
+		</testsuite>
+	</testsuites>
+
+	<coverage>
+		<include>
+			<directory suffix=".php">includes</directory>
+		</include>
+	</coverage>
+</phpunit>

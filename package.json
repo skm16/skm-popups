@@ -1,0 +1,48 @@
+{
+	"name": "popkit",
+	"version": "0.1.0",
+	"private": true,
+	"license": "GPL-2.0-or-later",
+	"description": "An accessible, lean WordPress popup plugin. Modals and inline banners, cache-safe by construction.",
+	"keywords": [
+		"wordpress",
+		"wordpress-plugin",
+		"popup",
+		"modal",
+		"accessibility"
+	],
+	"engines": {
+		"node": ">=20.10.0",
+		"npm": ">=10.0.0"
+	},
+	"scripts": {
+		"build": "npm run build:frontend && npm run build:editor",
+		"build:editor": "wp-scripts build",
+		"build:frontend": "node esbuild.config.mjs",
+		"start:frontend": "node esbuild.config.mjs --watch",
+		"lint": "npm run lint:js && npm run lint:css",
+		"lint:js": "wp-scripts lint-js",
+		"lint:css": "wp-scripts lint-style \"**/*.css\" --allow-empty-input",
+		"format": "wp-scripts format",
+		"test:unit:js": "wp-scripts test-unit-js",
+		"test:e2e": "playwright test",
+		"size": "size-limit",
+		"plugin-check": "node tools/plugin-check.mjs",
+		"env:start": "wp-env start",
+		"env:stop": "wp-env stop"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.62.1",
+		"@size-limit/file": "^13.0.3",
+		"@wordpress/e2e-test-utils-playwright": "^1.53.0",
+		"@wordpress/env": "^11.13.0",
+		"@wordpress/eslint-plugin": "^25.9.0",
+		"@wordpress/prettier-config": "^4.53.0",
+		"@wordpress/scripts": "^34.1.0",
+		"@wordpress/stylelint-config": "^24.2.0",
+		"esbuild": "^0.28.2",
+		"eslint": "^10.8.1",
+		"size-limit": "^13.0.3",
+		"stylelint": "^16.26.1"
+	}
+}

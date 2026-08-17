@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<ruleset name="popkit">
+
+	<description>WordPress Coding Standards for the popkit plugin. Targets WordPress 6.5+ and PHP 8.1+.</description>
+
+	<!-- Scan the whole plugin; the exclusions below carve out what is not ours. -->
+	<file>.</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/dist/*</exclude-pattern>
+	<exclude-pattern>*/tests/e2e/*</exclude-pattern>
+
+	<!--
+		Not in the task's exclusion list, but nothing here is plugin source:
+		.git holds packed objects, and the WordPress function stubs deliberately
+		redeclare core function names (__, esc_html__, absint …) which can never
+		carry the popkit prefix and are never shipped.
+	-->
+	<exclude-pattern>*/\.git/*</exclude-pattern>
+	<exclude-pattern>*/tests/php/stubs/*</exclude-pattern>
+
+	<!-- Command line defaults, so a bare `phpcs` behaves like CI. -->
+	<arg name="basepath" value="."/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+	<arg name="colors"/>
+	<arg value="ps"/>
+
+	<!-- Minimum supported platform. Both are invariants from docs/CLAUDE.md. -->
+	<config name="minimum_wp_version" value="6.5"/>
+	<config name="testVersion" value="8.1-"/>
+
+	<!--
+		WordPress bundles WordPress-Core, WordPress-Docs and WordPress-Extra.
+		WordPress-Docs is named explicitly so removing it is a deliberate act.
+	-->
+	<rule ref="WordPress"/>
+	<rule ref="WordPress-Docs"/>
+
+	<!-- Syntax and function availability against the PHP versions we claim to support. -->
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!-- Every user-facing string uses the popkit text domain. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="popkit"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Global functions, classes, constants and variables carry a popkit prefix. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="popkit"/>
+				<element value="Popkit"/>
+				<element value="POPKIT"/>
+			</property>
+		</properties>
+		<!--
+			Test bootstraps define WordPress-owned constants (ABSPATH,
+			WP_TESTS_PHPUNIT_POLYFILLS_PATH) that must keep their core names.
+		-->
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- PHPUnit discovers test classes by file name; class-foo.php cannot apply. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- Test bootstraps run on the CLI before WordPress exists: no WP_Filesystem, no wp_remote_get. -->
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- $_SERVER['argv'] in a CLI bootstrap is not request input. -->
+	<rule ref="WordPress.Security.ValidatedSanitizedInput">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- The WordPress test suite assigns to core globals by design. -->
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+</ruleset>
