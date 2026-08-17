@@ -1,10 +1,14 @@
 {
   "extends": "@wordpress/stylelint-config",
   "ignoreFiles": [
-    "build/**/*.css",
-    "dist/**/*.css",
-    "node_modules/**/*.css",
-    "vendor/**/*.css"
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/artifacts/**",
+    "**/coverage/**",
+    "**/playwright-report/**",
+    "**/test-results/**"
   ],
   "rules": {
     "custom-property-pattern": null,

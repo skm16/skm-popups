@@ -235,7 +235,7 @@ that gives popup plugins their reputation.
 | `timezone` | `"site"` or `"visitor"`. Default `"site"`. |
 | `start` / `end` | ISO 8601 UTC. `null` means open-ended. |
 | `recurrence.days` | ISO 8601 weekdays, 1 = Monday. Empty array means all days. |
-| `recurrence.windows` | Local `HH:MM`, inclusive of `from`, exclusive of `to`. A window where `to < from` crosses midnight — see below. |
+| `recurrence.windows` | Local `HH:MM`, inclusive of `from`, exclusive of `to`. Empty array means all day. A window where `to < from` crosses midnight — see below. |
 
 ### Windows crossing midnight
 
@@ -267,7 +267,15 @@ Worked example, `days: [5]` (Friday), window `22:00`–`02:00`:
 | Friday 01:00 | **no** — that is Thursday's window, and Thursday is not listed |
 
 Visible when `now` falls within `[start, end]` **AND** (`recurrence` is absent
-**OR** weekday matches **AND** time falls within a window).
+**OR** weekday matches **AND** (`windows` is absent or empty **OR** time falls
+within a window)).
+
+**An absent or empty `windows` list means the whole day**, not "no time at all".
+The empty list is the default stored shape, so the opposite reading would
+silently suppress every plain date-range campaign — one that sets `start` and
+`end` and nothing else. A window is a narrowing of the day, and a list of none
+narrows nothing. Only a zero-length window (`from == to`), which is an explicit
+entry, never matches.
 
 Evaluated once at page load, never on an interval — a popup must not vanish
 mid-interaction.
@@ -452,6 +460,7 @@ Contains only popups that survived server-side evaluation.
   "version": 1,
   "siteTimezone": "America/New_York",
   "needsContext": true,
+  "restUrl": "https://example.org/wp-json/popkit/v1/context",
   "popups": [
     {
       "id": 42,
@@ -470,6 +479,7 @@ Contains only popups that survived server-side evaluation.
 |---|---|
 | `siteTimezone` | Site setting, identical for all visitors, cache-safe. |
 | `needsContext` | `true` when at least one emitted popup has an enabled schedule or a `user_state` rule. The client fetches `/wp-json/popkit/v1/context` only when this is `true`. |
+| `restUrl` | Absolute URL of the context route, from `rest_url()`. Derived from a site setting, identical for all visitors, cache-safe. The client reads it rather than assembling a path, so a site on a non-default REST prefix or a subdirectory install still resolves. |
 
 **There is no `serverTime`.** Every value in this document is a function of the
 URL and of site settings, never of the request. That is what makes the response

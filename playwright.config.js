@@ -12,21 +12,37 @@
  * fixture, which creates the storage state on demand at
  * `STORAGE_STATE_PATH`. See `tests/e2e/README.md`.
  *
- * The WordPress environment is expected to be running already
- * (`npx wp-env start`). No `webServer` block is declared, matching WordPress
- * core/Gutenberg practice — starting Docker implicitly from a test runner hides
- * infrastructure failures inside test failures.
+ * The WordPress under test is a standalone install served by PHP's built-in
+ * server, not wp-env. wp-env cannot build its images on this network — its
+ * Dockerfile runs an unauthenticated `composer global require` that returns
+ * HTTP 429 from codeload.github.com, and retrying does not help. The
+ * replacement, and the reasons behind every part of it, are documented in
+ * `tests/e2e/README.md`.
  *
  */
 
+const fs = require( 'fs' );
 const path = require( 'path' );
 const { defineConfig, devices } = require( '@playwright/test' );
 
 /**
- * The wp-env *tests* environment listens on 8889; development is 8888.
- * E2E runs against the tests environment so it can be reset freely.
+ * Where the harness that stands up the WordPress instance lives.
+ *
+ * It sits outside the repository on purpose: it unpacks a WordPress release and
+ * writes a database, neither of which belongs in a plugin's working tree.
+ * Override with `POPKIT_E2E_DIR`. When the directory is absent — a fresh
+ * checkout on another machine — no `webServer` is declared and the suite simply
+ * runs against `WP_BASE_URL`, so this file stays loadable everywhere.
  */
-const BASE_URL = process.env.WP_BASE_URL || 'http://localhost:8889';
+const E2E_DIR =
+	process.env.POPKIT_E2E_DIR ||
+	'C:/Users/srskm/AppData/Local/Temp/claude/c--Users-srskm-Local-Sites-family-ties-of-westchester-app-public-wp-content-plugins-skm-popups/a171f5dd-f837-424f-a965-804c9b126faf/scratchpad/e2e-site';
+
+const SERVE_SCRIPT = path.join( E2E_DIR, 'serve.mjs' );
+const HAS_HARNESS = fs.existsSync( SERVE_SCRIPT );
+
+/** 8899 avoids wp-env's 8888/8889 and the MySQL port the harness uses. */
+const BASE_URL = process.env.WP_BASE_URL || 'http://127.0.0.1:8899';
 
 /** Artifacts (traces, screenshots, storage state) land outside the report dir. */
 const ARTIFACTS_PATH =
@@ -66,14 +82,48 @@ module.exports = defineConfig( {
 	fullyParallel: true,
 	forbidOnly: IS_CI,
 	retries: IS_CI ? 1 : 0,
-	// One worker on CI: the suite shares a single WordPress install, and
-	// parallel workers race on options, posts, and the block editor.
-	workers: IS_CI ? 1 : undefined,
+
+	/*
+	 * One worker, everywhere, and not only for the usual reason.
+	 *
+	 * The usual reason still applies: the suite shares a single WordPress
+	 * install, and parallel workers race on options, posts, and the editor.
+	 *
+	 * The new one is the server. `php -S` handles one request at a time on
+	 * Windows, where `PHP_CLI_SERVER_WORKERS` does not exist because it forks.
+	 * A second worker does not run in parallel; it queues behind the first and
+	 * spends its budget waiting, which turns a slow assertion into a timeout.
+	 */
+	workers: Number( process.env.PW_WORKERS ) || 1,
 
 	reporter: [
 		[ 'list' ],
 		[ 'html', { outputFolder: 'playwright-report', open: 'never' } ],
 	],
+
+	/*
+	 * Start the instance if nothing is answering on the port, and reuse it if
+	 * something is. `reuseExistingServer` is on in CI too: the harness is a
+	 * local process rather than a container, so a CI job that starts it in a
+	 * prior step is the normal arrangement rather than a mistake.
+	 *
+	 * `serve.mjs` runs the idempotent provisioning script before it listens, so
+	 * a cold machine reaches a seeded, plugin-activated install with no extra
+	 * step. That costs a second when everything already exists and about a
+	 * minute when the WordPress archive has to be downloaded, hence the timeout.
+	 */
+	...( HAS_HARNESS
+		? {
+				webServer: {
+					command: `node "${ SERVE_SCRIPT }"`,
+					url: BASE_URL,
+					reuseExistingServer: true,
+					timeout: 180 * 1000,
+					stdout: 'pipe',
+					stderr: 'pipe',
+				},
+		  }
+		: {} ),
 
 	use: {
 		baseURL: BASE_URL,
@@ -82,7 +132,17 @@ module.exports = defineConfig( {
 		locale: 'en-US',
 		actionTimeout: 10 * 1000,
 		navigationTimeout: 20 * 1000,
-		trace: 'retain-on-failure',
+		/*
+		 * Traces without DOM snapshots.
+		 *
+		 * Snapshotting crashes the renderer on this machine — every spec dies
+		 * with `page.evaluate: Target crashed`, and turning tracing off makes
+		 * the same spec pass. Actions, network, console and screenshots are all
+		 * still recorded, so a trace remains readable; what is lost is the
+		 * time-travel DOM viewer. Re-test `trace: 'retain-on-failure'` after a
+		 * Playwright or Chromium bump and put it back if it holds.
+		 */
+		trace: { mode: 'retain-on-failure', snapshots: false },
 		screenshot: 'only-on-failure',
 		video: 'on-first-retry',
 		contextOptions: {

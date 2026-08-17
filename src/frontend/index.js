@@ -1,15 +1,15 @@
 /**
  * popkit — frontend runtime, bundle entry point for dist/frontend.js.
  *
- * Phase 0 ships this file intentionally inert. It exists so the toolchain is
- * verifiable end to end: esbuild.config.mjs resolves it, `npm run build`
- * emits dist/frontend.js, and `npm run size` has an artifact to weigh.
+ * Two statements, and that is the whole of the entry point: read the emitted
+ * config, hand it to the controller. Everything else lives in a module that can
+ * be reasoned about, and tested, without a document around it.
  *
- * Phase 2 replaces the body with the controller — config parsing from the
- * #popkit-config JSON script, the conditional context fetch, the monotonic
- * clock offset, client-context rule evaluation, frequency capping, trigger
- * arming, and <dialog> rendering with focus management. Do not add any of
- * that here ahead of its phase.
+ * On a page with no `#popkit-config` element this file does nothing at all —
+ * `readConfig()` returns null and `boot()` returns on it. No listener is bound,
+ * no global is defined, no request is made. That matters because the bundle can
+ * arrive from a browser cache on a response that emitted no popups, and because
+ * `Popkit\Frontend` deliberately prints nothing when nothing matched.
  *
  * Hard constraints on everything that ever lands in this bundle
  * (docs/CLAUDE.md -> Hard constraints):
@@ -28,10 +28,6 @@
  * @see docs/build-plan.md
  */
 
-( () => {
-	// Phase 2 writes the controller into this scope. Until then the entry is
-	// deliberately a no-op: it reads nothing, binds no listener, dispatches no
-	// event, and touches no node. The IIFE is here so the bundle has the module
-	// scope the controller will be written into, and so the built artifact is
-	// valid, non-empty JavaScript that a browser can execute harmlessly.
-} )();
+import { boot, readConfig } from './controller.js';
+
+boot( readConfig() );

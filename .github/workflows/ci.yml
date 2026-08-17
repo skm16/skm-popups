@@ -12,6 +12,14 @@ name: CI
 #   npm run test:e2e      -> e2e job
 #   npm run size          -> js job
 #   npm run plugin-check  -> plugin-check job
+#
+# `npm run test:unit:js` is a seventh command, not one of the six, and it also
+# runs in the js job. The JavaScript unit suite carries the Phase 2 clock and
+# schedule exit criteria — including the proof that moving the device clock
+# after calibration does not move the corrected clock, and the guard asserting
+# that no wall-clock read exists on the schedule path. None of that is reachable
+# from PHPUnit, and Playwright would only catch it after a browser download and
+# a Docker boot.
 
 on:
   push:
@@ -141,6 +149,19 @@ jobs:
 
       - name: Lint (ESLint + Stylelint)
         run: npm run lint
+
+      # Runs before the build, and ungated, on purpose.
+      #
+      # Before, because these tests import from `src/` directly and owe nothing
+      # to `dist/`: a bundler failure should not be what hides a broken clock.
+      #
+      # Ungated, because the gate below asks whether `src/` exists, and the
+      # honest answer when it does not is a red suite, not a skipped one.
+      # tests/js/no-wall-clock-invariant.test.js asserts that the modules it
+      # guards are present and readable precisely so that a deleted or renamed
+      # schedule module fails loudly instead of scanning nothing and passing.
+      - name: Unit tests (Jest)
+        run: npm run test:unit:js
 
       # Both steps are gated on `src/` actually existing so the workflow is
       # honest about what it verified: with no sources there is nothing to

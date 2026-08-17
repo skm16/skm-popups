@@ -1,11 +1,16 @@
 /**
  * popkit — frontend stylesheet, bundle entry point for dist/frontend.css.
  *
- * Phase 0 ships this file intentionally inert, so that `npm run build` emits
- * dist/frontend.css and `npm run size` has an artifact to weigh.
+ * Phase 2 scope, and no more: the `--popkit-` token namespace, enough layout to
+ * centre a modal and pin a banner, the overlay, and the close button's 44x44
+ * hit area. Phase 6 owns themes, and it owns them alone — there is not one
+ * colour scheme in this file, because every shipped theme has to clear WCAG 2.2
+ * AA in both layouts and that is a budget of its own to spend.
  *
- * Phase 6 replaces the body with the modal and inline banner layouts and the
- * three shipped themes plus inherit mode. Nothing here styles anything today.
+ * The two colours here are `Canvas` and `CanvasText`, which are the user
+ * agent's own pair: they follow the platform's light or dark preference and
+ * forced-colors mode, and they cannot fail a contrast check against each other.
+ * They are the neutral default a theme token overrides, not a theme.
  *
  * Hard constraints on everything that ever lands in this stylesheet
  * (docs/CLAUDE.md -> Weight, Accessibility):
@@ -19,14 +24,313 @@
  *   merely faster.
  * - Shipped themes meet WCAG 2.2 AA contrast, and the close button keeps its
  *   44x44 hit area, in every theme and both layouts.
+ * - The close button is reachable at any content length. Overflow is bounded at
+ *   the popup root and scrolled inside `__content`, so the button — which sits
+ *   outside that scrolling region — cannot be pushed or scrolled off screen.
+ *   See "Overflow" below.
+ *
+ * ## Overflow
+ *
+ * Content longer than the viewport is the case that turns "there is a close
+ * button" into "there is a close button somewhere above the fold you cannot
+ * reach". A banner is the worst of it: it is not a dialog, so Escape does not
+ * close it, and it has no overlay to click, which leaves the button as the only
+ * dismissal path there is.
+ *
+ * So every layout is built the same way, and the shape is load bearing:
+ *
+ *   root       bounded by the viewport, and a flex column
+ *   container  a flex item that shrinks to the root — the panel, and the close
+ *              button's positioning context, so the button is pinned to the
+ *              panel's top corner and never moves
+ *   content    the only scroll container, shrinking inside the container's
+ *              padding box
+ *
+ * The button is pinned to a box that does not scroll, rather than made sticky
+ * inside a box that does. Sticky would have to sit in normal flow, which pushes
+ * the content down by the height of the hit area and abandons the reserved
+ * column that `padding-inline-end` already buys.
+ *
+ * The markup this styles is `Popkit\Renderer`'s DOM contract: a `<dialog>` or a
+ * `<div role="region" hidden>` root carrying `data-popkit-layout`,
+ * `data-popkit-position` and `data-popkit-animation`, wrapping a
+ * `__container`, a `__close` button and a `__content`.
  */
 
-/*
- * Placeholder token. It declares the `--popkit-` namespace root and keeps the
- * built stylesheet non-empty; Phase 6 replaces this block with the real token
- * set. `initial` substitutes as though the token were unset, so no element is
- * affected by it.
- */
 :root {
-	--popkit-placeholder: initial;
+	--popkit-gutter: 1rem;
+	--popkit-spacing: 1.5rem;
+	--popkit-max-width: 32rem;
+	--popkit-radius: 4px;
+	--popkit-surface: Canvas;
+	--popkit-on-surface: CanvasText;
+	--popkit-overlay: rgb(0 0 0 / 50%);
+	--popkit-close-size: 44px;
+	--popkit-duration: 200ms;
+	--popkit-easing: ease-out;
+	--popkit-z-index: 999999;
+}
+
+/*
+ * A banner is shipped `hidden` and revealed by the controller. Declared rather
+ * than left to the user agent because any author `display` on these selectors
+ * would otherwise win, and a popup whose contents sit visible in the page
+ * footer is the worst thing this stylesheet could allow.
+ */
+.popkit-popup[hidden] {
+	display: none;
+}
+
+.popkit-popup--size-small {
+	--popkit-max-width: 24rem;
+}
+
+.popkit-popup--size-medium {
+	--popkit-max-width: 32rem;
+}
+
+.popkit-popup--size-large {
+	--popkit-max-width: 48rem;
+}
+
+.popkit-popup--size-full {
+	--popkit-max-width: 100%;
+}
+
+/*
+ * The dialog is the positioning box and nothing else: the visible panel is the
+ * container inside it, so the same rules dress a modal and a banner. No
+ * z-index, because `.showModal()` puts it in the top layer, which is above
+ * every stacking context on the page by construction.
+ *
+ * `max-height` is what the container is clamped against, and `overflow` is now a
+ * backstop rather than the scroll mechanism. With the container shrinking to fit
+ * there is nothing left here to scroll, but a theme that gave the container a
+ * `min-height` would defeat the clamp, and this keeps the spill inside the dialog
+ * instead of off the bottom of the viewport. `overscroll-behavior` still earns
+ * its place: it stops a wheel or a trackpad gesture over the panel's padding from
+ * scrolling the page behind the modal.
+ */
+dialog.popkit-popup {
+	box-sizing: border-box;
+	width: calc(100% - (2 * var(--popkit-gutter)));
+	max-width: var(--popkit-max-width);
+	max-height: calc(100% - (2 * var(--popkit-gutter)));
+	margin: auto;
+	padding: 0;
+	overflow: auto;
+	overscroll-behavior: contain;
+	border: 0;
+	background: none;
+	color: inherit;
+}
+
+/*
+ * A flex column, so the container becomes an item that can shrink to the
+ * dialog's `max-height` instead of pushing past it.
+ *
+ * `[open]` is not decoration. An author `display` beats the user agent's
+ * `dialog:not([open]) { display: none }` whatever its specificity, so an
+ * unscoped `display: flex` here would paint every closed modal into the page —
+ * the same failure the `[hidden]` rule above exists to prevent for banners.
+ */
+dialog.popkit-popup[open] {
+	display: flex;
+	flex-direction: column;
+}
+
+dialog.popkit-popup[data-popkit-position="top"] {
+	margin-block: var(--popkit-gutter) auto;
+}
+
+/*
+ * The fallback is load bearing. `::backdrop` only inherits from its originating
+ * element in browsers that shipped the 2023 change to the pseudo-element's
+ * inheritance, and where it does not, an unresolved custom property computes to
+ * the initial value — a transparent backdrop, and a modal with no overlay at
+ * all.
+ */
+dialog.popkit-popup::backdrop {
+	background: var(--popkit-overlay, rgb(0 0 0 / 50%));
+}
+
+dialog.popkit-popup--no-overlay::backdrop {
+	background: none;
+}
+
+/*
+ * `max-height` is the whole fix for the banner. Fixed positioning makes the
+ * viewport the containing block, so `100%` is the viewport's height with no
+ * viewport unit needed and no disagreement between browsers about which
+ * viewport `vh` meant. Without it a banner taller than the screen grows out of
+ * the top of the window — and at `bottom` it grows upwards, taking the close
+ * button with it, which is how a banner becomes undismissable by mouse or
+ * touch.
+ *
+ * The specificity here is (0,1,0), below `.popkit-popup[hidden]`'s (0,2,0), so
+ * a hidden banner still resolves to `display: none`. That ordering is not an
+ * accident and must survive any edit to either rule.
+ */
+.popkit-popup--banner {
+	position: fixed;
+	inset-inline: 0;
+	z-index: var(--popkit-z-index);
+	display: flex;
+	flex-direction: column;
+	max-height: 100%;
+}
+
+.popkit-popup--banner[data-popkit-position="top"] {
+	inset-block-start: 0;
+}
+
+.popkit-popup--banner[data-popkit-position="bottom"] {
+	inset-block-end: 0;
+}
+
+/*
+ * `padding-inline-end` reserves the close button's whole column, so content can
+ * never run underneath it however long the first line is. It is the button's
+ * hit area rather than its icon, because the hit area is the part that has to
+ * be 44px wide and the part a visitor aims at.
+ *
+ * `min-height: 0` is what lets the panel shrink. A flex item's automatic minimum
+ * size is its content's height, which would hold the container open at its full
+ * content height and push the overflow straight back out of the root that was
+ * just bounded. Zeroing it hands the clamp to the root — the dialog's
+ * `max-height`, or the banner's — and the container follows it down.
+ */
+.popkit-popup__container {
+	position: relative;
+	display: flex;
+	box-sizing: border-box;
+	flex-direction: column;
+	min-height: 0;
+	padding: var(--popkit-spacing);
+	padding-inline-end: max(var(--popkit-spacing), var(--popkit-close-size));
+	border-radius: var(--popkit-radius);
+	background: var(--popkit-surface);
+	color: var(--popkit-on-surface);
+	transition:
+		opacity var(--popkit-duration) var(--popkit-easing),
+		transform var(--popkit-duration) var(--popkit-easing);
+}
+
+.popkit-popup--banner .popkit-popup__container {
+	border-radius: 0;
+}
+
+/*
+ * The one scroll container in the popup, and deliberately the innermost box: the
+ * close button is a sibling of this element rather than a descendant, so no
+ * amount of scrolling here can move it. `min-height: 0` is the same
+ * flex-item concession the container makes, spelled out rather than left to the
+ * rule that a scroll container's automatic minimum size is zero — the behaviour
+ * this file depends on should not be a side effect of `overflow`.
+ *
+ * `overscroll-behavior` stops a scroll that reaches the end of the content from
+ * chaining to the page underneath, which is the "scrolled the article instead of
+ * the popup" bug.
+ *
+ * One thing CSS cannot finish. A scroll container that a keyboard user has no
+ * way to focus is unreachable by arrow key, and browsers disagree about whether
+ * to hand one a tab stop for free. `Popkit\Renderer` should give this element
+ * `tabindex="0"` with a `role` and an accessible name, which is what WCAG 2.1.1
+ * asks of any scrollable region and does not depend on that disagreement. Until
+ * it does, overflowing text is still reachable by tabbing to whatever focusable
+ * content sits inside it, and the close button is reachable either way — which
+ * is the invariant this file is responsible for.
+ */
+.popkit-popup__content {
+	min-height: 0;
+	overflow: auto;
+	overscroll-behavior: contain;
+}
+
+.popkit-popup__content > :first-child {
+	margin-block-start: 0;
+}
+
+.popkit-popup__content > :last-child {
+	margin-block-end: 0;
+}
+
+/*
+ * 44x44 minimum in every theme and both layouts, per docs/CLAUDE.md ->
+ * Accessibility. `min-width` and `min-height` rather than fixed dimensions, so
+ * a theme that gives the button a longer visible label grows it instead of
+ * clipping it.
+ */
+.popkit-popup__close {
+	position: absolute;
+	inset-block-start: 0;
+	inset-inline-end: 0;
+	display: inline-flex;
+	box-sizing: border-box;
+	align-items: center;
+	justify-content: center;
+	min-width: var(--popkit-close-size);
+	min-height: var(--popkit-close-size);
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
+/*
+ * Clipped, never `display: none` and never `visibility: hidden` — either of
+ * those removes the button's only accessible name and leaves an unlabelled
+ * control, which is the failure this text exists to prevent.
+ */
+.popkit-popup__close-text {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	border: 0;
+	white-space: nowrap;
+}
+
+[data-popkit-animation="none"] .popkit-popup__container {
+	transition: none;
+}
+
+/*
+ * Entry animation. `@starting-style` supplies the values the container is
+ * interpolated from the first time it is rendered, which is the moment
+ * `.showModal()` takes the dialog out of `display: none`. No exit animation:
+ * closing is immediate, so nothing stands between a visitor pressing Escape and
+ * the popup being gone.
+ */
+@starting-style {
+
+	[data-popkit-animation="fade"] .popkit-popup__container {
+		opacity: 0;
+	}
+
+	[data-popkit-animation="slide"] .popkit-popup__container {
+		transform: translateY(1rem);
+		opacity: 0;
+	}
+}
+
+/*
+ * Instant, not merely faster. The token is zeroed as well as the transition
+ * removed, so anything Phase 6 builds on `--popkit-duration` inherits the
+ * preference without having to remember this block exists.
+ */
+@media (prefers-reduced-motion: reduce) {
+
+	:root {
+		--popkit-duration: 0s;
+	}
+
+	.popkit-popup .popkit-popup__container {
+		transition: none;
+		animation: none;
+	}
 }

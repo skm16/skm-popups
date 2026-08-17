@@ -137,8 +137,23 @@ Constraints on this exception:
 - Bypassing the REST nonce is safe **specifically because this route is `GET`,
   writes nothing, and returns one boolean**. CSRF protects against state changes;
   there is no state to change. This reasoning does not extend to any other route.
-- The route sends no `Access-Control-Allow-Origin` header, so same-origin policy
-  prevents a cross-origin page from reading whether the visitor is logged in.
+- **Same-origin policy is not a defence here, and must never be relied on as
+  one.** It governs `fetch()` and `XHR`; it does not govern `<script src>`.
+  WordPress serves any REST route as JSONP when `_jsonp` is present —
+  `rest_jsonp_enabled` defaults to true, the callback name is read straight from
+  `$_GET`, and the response is emitted as `application/javascript` — so
+  `<script src=".../context?fields=user_state&_jsonp=steal">` on an attacker's
+  page executes there with the visitor's cookies attached and hands them the
+  login state. Two defences are implemented, and both are needed:
+  - `rest_send_cors_headers` is removed from `rest_pre_serve_request` for this
+    route, so no `Access-Control-Allow-Origin` is sent and a credentialed
+    `fetch()`/`XHR` read is blocked.
+  - `rest_jsonp_enabled` is filtered `false` for this route, which blocks the
+    `<script src>` read. It is attached in `Rest_Context::init()`, before
+    dispatch, because `WP_REST_Server::serve_request()` reads that filter and
+    fixes the content type well before it dispatches the route — a filter added
+    inside the handler would already be too late. It is scoped by exact route
+    match, so JSONP elsewhere on the site is untouched.
 
 ### Other rules governing it
 

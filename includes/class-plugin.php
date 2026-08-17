@@ -258,6 +258,7 @@ final class Plugin {
 	 */
 	private function boot_rest(): void {
 		Rest_Schema::init();
+		Rest_Context::init();
 	}
 
 	/**
@@ -272,7 +273,7 @@ final class Plugin {
 	 * @return void
 	 */
 	private function boot_frontend(): void {
-		/* Intentionally empty until Phase 2. */
+		Frontend::init();
 	}
 
 	/**
