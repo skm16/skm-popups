@@ -42,12 +42,37 @@
  * to "pass" would have been the same number of characters and would have shown
  * every targeted popup to everybody for the length of a phase.
  *
- * ## Stage 10 is a stub in this phase, and it is an open one
+ * ## Stage 10, and what an empty trigger list means
  *
- * Phase 3 owns triggers. Until it lands there is nothing to arm, so an eligible
- * popup opens on load. `record.triggers` is carried through the record shape
- * unread so that the phase implementing arming changes one call site rather
- * than the record.
+ * Arming is `trigger-controller.js`. This file decides *which* popups are armed
+ * and *when*, and the answer is "only the ones that passed stages 7 to 9, and
+ * not one moment earlier". `docs/CLAUDE.md` -> Architecture invariants states it
+ * as an absolute: nothing binds to the DOM for a popup that could never show. A
+ * popup its targeting refused, its schedule closed, or its frequency cap
+ * suppressed installs no timer, no scroll listener, no click handler and no
+ * observer — there is no code path here from which it could.
+ *
+ * **A popup with no configured triggers opens on page load**, as though it
+ * carried a single `page_load` with `delay_ms: 0`. This is the default a site
+ * owner hits when they save a popup without opening the trigger panel, so it is
+ * chosen rather than inherited: a published, eligible, correctly targeted popup
+ * that stays invisible is indistinguishable from a broken plugin, produces no
+ * error anywhere to lead its author to the panel they did not open, and the
+ * support question it generates has no good answer. It is also what Phase 2
+ * shipped, so no popup changes behaviour on the day triggers land.
+ *
+ * A trigger list that is **not** empty is honoured exactly as written, and the
+ * two cases are deliberately not merged. A popup whose only configured trigger
+ * cannot be armed — an unregistered type left behind by a deactivated extension
+ * — stays shut. The author asked for something specific and popkit could not do
+ * it; substituting "open immediately" would show the popup to everyone on every
+ * page as the *consequence of an error*, which is the direction this plugin
+ * never fails in.
+ *
+ * On fire the popup opens and every sibling trigger for it is torn down, so the
+ * first to fire wins. Teardown also runs on abort and on `pagehide`, and it is
+ * `trigger-controller.js` that owns all three; the one teardown this file calls
+ * for itself is on a programmatic open, which that module has no way to observe.
  *
  * ## What this file does not do
  *
@@ -69,6 +94,11 @@ import { closePopup, isPopupOpen, openPopup } from './dialog.js';
 import { emitBeforeOpen, emitClose, emitOpen } from './events.js';
 import { isSuppressed, recordConvert, recordSeen } from './frequency.js';
 import { scheduleAllows } from './schedule.js';
+import { armTriggers } from './trigger-controller.js';
+import clickSelector from './triggers/click-selector.js';
+import deepLink from './triggers/deep-link.js';
+import pageLoad from './triggers/page-load.js';
+import scrollDepth from './triggers/scroll-depth.js';
 
 /**
  * `id` of the script element carrying the emitted config.
@@ -118,6 +148,93 @@ const USER_STATE_RULE = 'user_state';
 const CLIENT_RULES = new Map();
 
 /**
+ * Trigger modules, keyed by the key each module declares for itself.
+ *
+ * v1's four, and **the only trigger registry in the shipped bundle**. Adding a
+ * fifth trigger to popkit itself means editing this map, and that is the design
+ * rather than an omission waiting to be tidied — see "No client-side extension
+ * point in v1" below, which is the part a reader most needs to be told the truth
+ * about.
+ *
+ * The list is spelled here rather than inside `trigger-controller.js` because
+ * arming a trigger and knowing which triggers exist are different jobs: that
+ * module takes the registry as an argument, so it can be tested against a single
+ * trigger without the other three coming along.
+ *
+ * The keys come off the modules. `page_load`, `scroll_depth`, `click_selector`
+ * and `deep_link` are stored strings — a popup's trigger config carries the same
+ * spelling as its `type`, and the PHP registry declares it a third time — so the
+ * fewer places the bundle repeats them, the fewer places one can be wrong.
+ *
+ * A `Map` rather than an object literal, because a configured `type` is author
+ * data that arrived over the wire and reaches this container as a lookup key. On
+ * a `Map` a config saying `"type": "constructor"` finds nothing; on an object
+ * literal it would find something off `Object.prototype`.
+ * `trigger-controller.js` guards the same hazard from its own side by requiring
+ * a `setup` function on whatever it resolves, and two cheap guards is the right
+ * number when the alternative is a popup opening on an event nobody configured.
+ *
+ * ## What a trigger module is
+ *
+ * ```js
+ * export default {
+ *     key: 'scroll_depth',
+ *     setup( api, values ) {
+ *         // Arm listeners, timers or observers here.
+ *         return () => {}; // Teardown. Required, never optional.
+ *     },
+ * };
+ * ```
+ *
+ * `setup()` is handed the popup's trigger API — `fire()`, `abort()`, `popup`,
+ * `element` — and that trigger's stored values, and **must** return a teardown
+ * function. `trigger-controller.js` owns that contract, calls the teardown on
+ * fire, on abort and on `pagehide`, and reports a module that breaks it.
+ *
+ * ## No client-side extension point in v1
+ *
+ * A trigger has two halves, and only one of them is extensible today.
+ *
+ * **The schema half is.** PHP, on the `popkit_register_triggers` action, declares
+ * the key, the editor label and the field definitions, and
+ * `docs/CLAUDE.md` -> Registry invariants makes that the only place a field
+ * schema is declared — so the editor control, the REST validation and the
+ * sanitizer all follow from one registration, with no React and no JavaScript.
+ *
+ * **The runtime half is not.** A `setup()` written outside this bundle has no way
+ * in, and a `registerTrigger()` function would not by itself create one:
+ *
+ * - The bundle is an IIFE that exports nothing to the page, so the function
+ *   would have to be published on `window.popkit`. That object is `api.js`'s,
+ *   deliberately three members wide, and a fourth member is an `API_VERSION`
+ *   increment rather than an implementation detail.
+ * - Registration would have to happen **before** `boot()`, which runs
+ *   synchronously as the bundle executes. `wp_enqueue_script()` naming
+ *   `popkit-frontend` as a dependency orders the other script *after* the
+ *   bundle, which is too late — arming has already run for this pageview. So
+ *   the extension point needs a queue, a deferred boot, or a documented event
+ *   to register into, and choosing one of those is a v1.1 decision with a public
+ *   contract attached.
+ *
+ * Third-party triggers are therefore out of scope for v1, stated rather than
+ * implied. Nothing is lost by an extension that arrives early: PHP keeps an
+ * unregistered trigger's stored config intact, and `trigger-controller.js`
+ * reports a type it cannot arm and leaves the popup shut, so the author's
+ * configuration is still there on the day a runtime path exists for it.
+ *
+ * @see docs/CLAUDE.md -> Registry invariants
+ * @see docs/data-model.md -> Triggers
+ *
+ * @type {Map<string, Object>}
+ */
+const TRIGGERS = new Map(
+	[ pageLoad, scrollDepth, clickSelector, deepLink ].map( ( trigger ) => [
+		trigger.key,
+		trigger,
+	] )
+);
+
+/**
  * One popup, as the controller works with it.
  *
  * `element` is deliberately three-valued: `undefined` means the DOM has not
@@ -130,13 +247,14 @@ const CLIENT_RULES = new Map();
  * @property {number}            id           Post ID, and the frequency storage key.
  * @property {string}            slug         Post slug, the identifier the public API takes.
  * @property {Object}            conditions   Emitted rule set, client-context rules only.
- * @property {Array}             triggers     Emitted trigger list. Unread until Phase 3.
+ * @property {Array}             triggers     Emitted trigger list, armed at stage 10.
  * @property {Object}            schedule     Emitted schedule object.
  * @property {Object}            frequency    Emitted frequency object.
  * @property {Object}            display      Emitted display object.
  * @property {boolean}           needsContext Whether stages 7 and 8 need the context route.
  * @property {Element|null|void} element      Popup root, once looked up.
  * @property {boolean}           isBound      Whether its conversion listener is attached.
+ * @property {Function|null}     teardown     Disarms this popup's triggers, or null.
  */
 
 /**
@@ -298,6 +416,7 @@ function toRecords( popups ) {
 				isScheduled( schedule ) || hasUserStateRule( conditions ),
 			element: undefined,
 			isBound: false,
+			teardown: null,
 		} );
 	}
 
@@ -355,13 +474,75 @@ function consider( record, context ) {
 		return;
 	}
 
-	/*
-	 * Stage 10, in its Phase 2 form. Phase 3 replaces this line with trigger
-	 * arming: setup per trigger, first fire wins, siblings torn down on fire, on
-	 * abort and on `pagehide`. Until then there is nothing to arm and an
-	 * eligible popup opens on load.
-	 */
-	openRecord( record, false );
+	// Stage 10.
+	arm( record );
+}
+
+/**
+ * Arms a popup's triggers. Pipeline stage 10, and the last thing that runs.
+ *
+ * Reached only from {@link consider}, and only past stages 7, 8 and 9. That is
+ * the whole of the invariant `docs/CLAUDE.md` -> Architecture invariants states
+ * — nothing binds to the DOM for a popup that could never show — and it is held
+ * by there being no other caller rather than by a check inside the trigger
+ * modules, which is where it could be forgotten one trigger at a time.
+ *
+ * The markup is resolved first and its absence ends the stage. A popup the
+ * server emitted config for but no markup cannot be opened by anything, so
+ * arming its triggers would install listeners for an open that could never
+ * happen — the same waste the invariant exists to prevent, one step later.
+ *
+ * An empty trigger list opens the popup here and now. That decision, and why an
+ * *unarmable* trigger is emphatically not the same case, is in the file header.
+ *
+ * `armTriggers()` is handed the record as `api.popup` — it is the popup config
+ * the emitted JSON described, `record.triggers` is the list it arms from, and
+ * `deep_link` needs the slug off it — plus {@link TRIGGERS} as the registry to
+ * resolve each configured `type` against. Its return is the teardown for the
+ * whole set, kept only so that a programmatic open can disarm; every other
+ * teardown path, including `pagehide`, is that module's own.
+ *
+ * @param {PopkitRecord} record Popup that passed stages 7 to 9.
+ */
+function arm( record ) {
+	const element = elementFor( record );
+
+	if ( ! element ) {
+		return;
+	}
+
+	if ( 0 === record.triggers.length ) {
+		openRecord( record, false );
+		return;
+	}
+
+	record.teardown = armTriggers( record, element, TRIGGERS, ( source ) =>
+		openRecord( record, false, source )
+	);
+}
+
+/**
+ * Tears down a popup's triggers, at most once.
+ *
+ * Called when a popup is opened by `window.popkit.open()`, which is the one
+ * open `trigger-controller.js` cannot see. Leaving the triggers armed would let
+ * a scroll depth crossed after the visitor dismissed an author-opened popup put
+ * it back on screen, and the frequency cap would not catch it — stage 9 ran
+ * once, at arming time, and a fire does not re-run it.
+ *
+ * The reference is cleared before the call, so this is safe to call twice and
+ * safe to call from inside a teardown.
+ *
+ * @param {PopkitRecord} record Popup to disarm.
+ */
+function disarm( record ) {
+	const teardown = record.teardown;
+
+	record.teardown = null;
+
+	if ( 'function' === typeof teardown ) {
+		teardown();
+	}
 }
 
 /**
@@ -515,15 +696,40 @@ function scheduleAllowsRecord( record, context ) {
  * the record on a successful, non-cancelled open and on nothing else, and a
  * visitor who was shown a popup was shown it however it was summoned.
  *
+ * `source` is the element a trigger fired from — the link or button a
+ * `click_selector` matched. It is passed straight to `dialog.js` as the element
+ * focus returns to on close, which is the accessibility rule in
+ * `docs/CLAUDE.md` -> Accessibility: focus returns to the element that triggered
+ * the popup. Every other trigger omits it, and focus then returns to wherever it
+ * was before opening, which is that rule's other half.
+ *
+ * Three outcomes, not two, because the trigger controller has to tell a refusal
+ * that may not hold next time from one that settles the popup:
+ *
+ * - `true`  — open. The trigger latches, as first-fire-wins requires.
+ * - `false` — **busy, and only busy.** Another popup holds the screen. The
+ *   trigger stays armed so the visitor can use it again once the screen is free;
+ *   retiring it here leaves the author's button on the page doing nothing, with
+ *   nothing to explain why.
+ * - `null`  — settled without opening: vetoed through `popkit:before-open`, or
+ *   the element is missing. The trigger latches. Re-arming on a veto would put
+ *   the same question to a consent integration on every click, every scroll
+ *   event and every fire of every sibling trigger, which is the load
+ *   first-fire-wins exists to prevent.
+ *
+ * {@see armTriggers()} latches on anything that is not `false`, so `false` is
+ * reserved for the one genuinely retryable case and nothing else may use it.
+ *
  * @param {PopkitRecord} record       Popup to open.
  * @param {boolean}      programmatic Whether this came from the public API.
- * @return {boolean} True when the popup is now open.
+ * @param {Element}      [source]     Element a trigger fired from, if any.
+ * @return {boolean|null} True when open, false when busy, null when settled.
  */
-function openRecord( record, programmatic ) {
+function openRecord( record, programmatic, source ) {
 	const element = elementFor( record );
 
 	if ( ! element ) {
-		return false;
+		return null;
 	}
 
 	if ( isPopupOpen( element ) ) {
@@ -535,7 +741,7 @@ function openRecord( record, programmatic ) {
 	}
 
 	if ( ! emitBeforeOpen( record ) ) {
-		return false;
+		return null;
 	}
 
 	bindConvert( record, element );
@@ -558,9 +764,16 @@ function openRecord( record, programmatic ) {
 			false !== record.display.close_on_overlay_click,
 
 		/*
-		 * Phase 3 supplies the element a click trigger fired from. Omitted here,
-		 * so `dialog.js` returns focus to wherever it was before opening.
+		 * The element a click trigger fired from, when there was one.
+		 * `dialog.js` falls back to whatever held focus before the open, so
+		 * passing `undefined` for every other trigger is the correct instruction
+		 * rather than a missing one — and anything that cannot take focus is
+		 * turned back into that instruction here. A truthy value `dialog.js`
+		 * could not focus would suppress the fallback and strand focus on the
+		 * body, which is worse than the omission it came from.
 		 */
+		trigger:
+			source && 'function' === typeof source.focus ? source : undefined,
 
 		onClose: () => emitClose( record ),
 	} );
@@ -570,7 +783,25 @@ function openRecord( record, programmatic ) {
 	}
 
 	emitOpen( record );
-	recordSeen( record.id );
+
+	/*
+	 * The frequency object goes with the id. `docs/data-model.md` gives `always`
+	 * a storage of "none", and `recordSeen()` can only honour that if it is told
+	 * the mode — the storage key carries no copy of it. Omitting it writes a
+	 * record nothing reads, which then outlives the setting that produced it: an
+	 * author switching an uncapped popup to `once_ever` would find it already
+	 * suppressed for every visitor who saw it while it was uncapped.
+	 */
+	recordSeen( record.id, record.frequency );
+
+	/*
+	 * An author-initiated open ends this popup's trigger arming. Every other
+	 * path here was reached by a trigger firing, and `trigger-controller.js`
+	 * has already torn its own set down by then — see disarm().
+	 */
+	if ( programmatic ) {
+		disarm( record );
+	}
 
 	return true;
 }
@@ -665,7 +896,23 @@ function elementFor( record ) {
 function openBySlug( slug ) {
 	const record = findBySlug( slug );
 
-	return null === record ? null : openRecord( record, true );
+	if ( null === record ) {
+		return null;
+	}
+
+	/*
+	 * `null` means two different things on either side of this line, and the
+	 * public API only understands one of them. To {@see openRecord()} it means
+	 * "settled without opening" — vetoed, or the element is missing. To
+	 * {@see resolve()} in `api.js` it means "no popup with that slug", which is
+	 * printed to the console as a diagnostic for a mistyped call.
+	 *
+	 * Passing one through as the other would tell an author their slug was wrong
+	 * when what actually happened is that their own `popkit:before-open`
+	 * listener cancelled the open. Collapse to a boolean here: the caller asked
+	 * whether the popup opened, and it did not.
+	 */
+	return true === openRecord( record, true );
 }
 
 /**

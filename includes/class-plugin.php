@@ -30,12 +30,12 @@ defined( 'ABSPATH' ) || exit;
  * off, because those belong with the code that would have to change if they were
  * wrong.
  *
- * `boot()` names no class from a phase that has not been built, so the two
- * remaining extension points are empty rather than defensive. There is
- * deliberately no `class_exists()` guard around the Phase 1 classes either: they
- * are first-party files resolved by the same autoloader that already resolved
- * this one, so a missing one means a broken install, and guarding it would turn
- * that into a silent no-op — the failure mode
+ * `boot()` names no class from a phase that has not been built, so the one
+ * remaining extension point — the block editor UI — is empty rather than
+ * defensive. There is deliberately no `class_exists()` guard around any class it
+ * does name: they are first-party files resolved by the same autoloader that
+ * already resolved this one, so a missing one means a broken install, and
+ * guarding it would turn that into a silent no-op — the failure mode
  * {@see Activator::assign_capabilities()} was changed to stop producing.
  *
  * @since 0.1.0
@@ -198,12 +198,27 @@ final class Plugin {
 	 * first genuine consumer is what keeps every documented registration point
 	 * working.
 	 *
+	 * {@see \Popkit\Triggers\Builtin_Triggers::init()} is the same shape: it
+	 * attaches a callback to `popkit_register_triggers` and registers nothing
+	 * yet, so calling it here adds popkit's own four triggers to the queue of
+	 * registrations without forcing the registry open ahead of anybody else's.
+	 *
+	 * That call is unguarded like every other in this class. A `class_exists()`
+	 * check around it would read as caution and behave as silent degradation: on
+	 * an incomplete deploy the site would boot, the editor would offer no trigger
+	 * at all, and every saved trigger config would sanitize against an empty
+	 * registry — with nothing anywhere saying why. No test protects that site,
+	 * because a test only ever runs against a tree where the file is present. A
+	 * missing first-party class is a broken install and reports itself as one.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @return void
 	 */
 	private function boot_registries(): void {
 		require_once POPKIT_DIR . 'includes/functions.php';
+
+		Triggers\Builtin_Triggers::init();
 	}
 
 	/**

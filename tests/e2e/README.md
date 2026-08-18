@@ -71,10 +71,37 @@ php "$E2E/env.php"                  # print resolved paths and URLs as JSON
 Seeding on its own, without touching anything else:
 
 ```bash
-php "$E2E/seed.php"                 # ensure the fixtures exist and are published
-php "$E2E/seed.php" --unpublish     # draft every popkit popup
-php "$E2E/seed.php" --publish       # publish them again
+php "$E2E/seed.php"                 # purge every popup, recreate the seed set
+php "$E2E/seed.php" --unpublish     # draft every popup (the zero-footprint state)
+php "$E2E/seed.php" --publish       # publish the fixtures seed.php owns
+php "$E2E/seed.php" --inventory     # print what is there; change nothing
 ```
+
+**`seed.php` is authoritative over fixture content, and destructive by design.**
+A plain run deletes every `popkit_popup` post first — in every status, including
+`trash` and `auto-draft` — and then creates the seed set from nothing. It does
+not merge with what it finds, and `--publish` will not republish a popup it did
+not create.
+
+That matters more than it sounds. Because no built-in server condition is
+registered yet, every stored rule is indeterminate and any *published* popup
+matches every URL, so one popup abandoned by a crashed spec silently changes the
+meaning of every "exactly N popups" assertion in the suite. When seeding merely
+upserted by slug, that leftover survived into the next run and `--publish` put it
+back on screen. Three consecutive full runs disagreed with each other before the
+cause was found.
+
+Every mode prints an inventory afterwards — count, slugs, statuses, stored meta,
+and a `FOREIGN` marker against anything that is not a seed fixture. A run's
+starting state is in the log rather than assumed.
+
+`reset.php` is authoritative over the *database*: it drops `popkit_e2e` and has
+`setup.php` rebuild it, reaching `seed.php` as the final stage. Use `reset.php`
+when the install or the schema is suspect; use `seed.php` when only the content
+is. Both refuse to run against any database but `popkit_e2e`, and `seed.php`
+additionally checks the connection it is actually holding — including `siteurl`
+read from the connected database, which is the only check whose expected value
+is not derived from the same constant it is testing.
 
 To force a fresh WordPress tree as well as a fresh database, delete
 `C:/tmp/popkit-e2e` and run `setup.php`. The release archive is cached at
@@ -92,7 +119,8 @@ To force a fresh WordPress tree as well as a fresh database, delete
 5. Junctions the plugin working tree to `wp-content/plugins/popkit`.
 6. Installs WordPress by calling `wp_install()` directly.
 7. Activates popkit and pins Twenty Twenty-Four.
-8. Seeds the fixtures.
+8. Seeds the fixtures, purging every existing popup first, and prints an
+   inventory of what the instance ends up holding.
 
 Steps 6, 7 and 8 each run in their own PHP process. They have to: `WP_INSTALLING`
 makes `wp_get_active_and_valid_plugins()` return nothing, so the process that
@@ -100,8 +128,10 @@ installs WordPress cannot be a process in which popkit is loaded, and the proces
 that activates the plugin loaded before it was active, so its `plugins_loaded`
 hook never fired there either.
 
-Every step is idempotent and re-runnable. `setup.php` on a healthy instance is a
-no-op that prints what it found.
+Every step is idempotent and re-runnable, in the sense that running it twice
+leaves the same state. Steps 1 to 7 on a healthy instance are a no-op that prints
+what they found; step 8 always does its work, because it reaches that same state
+by rebuilding the fixtures rather than by inspecting them.
 
 ### The plugin is linked, not copied
 
@@ -126,7 +156,9 @@ every plugin change if you are ever in that state.
 
 ## Fixtures
 
-Seeded by `seed.php`, matched by slug and updated in place.
+Seeded by `seed.php`. The popup is purged and recreated on every run, so its
+post ID changes; the pages are updated in place, so theirs do not. Address
+fixtures by slug, never by ID.
 
 | Slug | Type | Notes |
 |---|---|---|
@@ -144,8 +176,16 @@ every rule is indeterminate, so the popup survives server-side matching on every
 URL. The rule is seeded now so the fixture narrows to its page automatically when
 Phase 4 lands, without the fixture changing.
 
+`e2e-modal` always holds the **lowest post ID of any popup**, which
+`accessibility.spec.js` relies on to reason about which popup is considered
+first. The purge-and-recreate order is what preserves that: seeding empties the
+post type and recreates the fixture before any spec runs, so every popup a spec
+creates afterwards is necessarily later. Do not create popups outside a spec.
+
 Anything beyond these three, create per-spec through `requestUtils` and delete
-afterwards. Shared mutable fixtures are how a suite starts depending on test
+afterwards with `force: true`, which bypasses the trash — a trashed popup is
+invisible to `post_status => 'any'` and is exactly the leftover that used to
+survive seeding. Shared mutable fixtures are how a suite starts depending on test
 order. Creating a popup with meta over REST is verified working:
 
 ```js
@@ -165,6 +205,44 @@ const popup = await requestUtils.rest( {
 ## Known constraints
 
 Read these before writing a spec. Each one has already cost time.
+
+### Exactly one agent, or one person, runs e2e at a time
+
+This is not a style preference. There is **one** WordPress install, on **one**
+port, backed by **one** database, writing to **one** set of artifact
+directories. Nothing about the harness is per-run isolated:
+
+| Shared thing | Where | What a second run does to it |
+|---|---|---|
+| Database | `popkit_e2e` | Deletes and republishes the other run's popups mid-assertion |
+| Port | `127.0.0.1:8899` | Second `webServer` finds 8899 answering, `reuseExistingServer` attaches to the first run's instance |
+| Docroot | `C:/tmp/popkit-e2e/wordpress` | A concurrent `setup.php` rewrites config and the mu-plugin under the running server |
+| Artifacts | `artifacts/`, `playwright-report/` | Traces, screenshots and the HTML report overwrite each other |
+| Storage state | `artifacts/storage-states/admin.json` | Two runs write the same login artifact |
+
+The database is the one that actually bites. Specs create popups over REST and
+delete them in `afterEach`; a second run seeding, drafting or purging at the same
+moment makes both runs read a post count neither of them caused. The failures
+that result are not reproducible and do not point at the code — they look like
+flakes, and they are not.
+
+**This has now been diagnosed twice from scratch**, both times after several
+hours spent hunting a race in the runtime that was never there. If work is being
+parallelised across agents, exactly one of them runs Playwright, and it runs when
+the others have finished editing. Everything else — PHPCS, PHPUnit, esbuild,
+size-limit, Jest — is safely concurrent, because none of it touches this
+instance.
+
+Before starting a run, confirm nobody else is mid-run:
+
+```bash
+netstat -ano | grep 8899          # is an instance already up, and whose?
+php "$E2E/seed.php" --inventory   # what does the database actually contain?
+```
+
+An inventory showing anything marked `FOREIGN`, or more popups than the one
+fixture, means either a previous run crashed or another one is live right now.
+`php "$E2E/seed.php"` clears the first case; only waiting clears the second.
 
 ### One worker
 
@@ -189,22 +267,31 @@ plain string after a Playwright or Chromium bump.
 
 ### A published popup is emitted on every page
 
-Until Phase 4 registers the server conditions, the emitted-nothing assertions
-hold only when **no popup is published at all**, not when the visited page is one
-the popup does not target. `smoke.spec.js` asserts exactly that about `/`.
+Until Phase 4 registers the built-in server conditions, every stored rule is
+indeterminate, so every published popup survives server-side matching on every
+URL. The emitted-nothing assertions therefore hold only when **no popup is
+published at all**, not when the visited page is one the popup does not target.
 
-Today it passes because `Plugin::boot()` does not yet wire `Frontend::init()`, so
-nothing is emitted anywhere. **The moment that wiring lands, `smoke.spec.js` will
-fail against the seeded fixture** — for a correct reason. Two honest ways out,
-neither of which is mine to choose:
+Still true as of Phase 3, and easy to see for yourself — the seeded fixture is
+served on the front page, which it does not target:
 
-- Have the zero-footprint spec create and destroy its own popups, asserting
-  against a site it knows is empty.
-- Run that spec against the `--unpublish` state and the rest against
-  `--publish`.
+```console
+$ curl -s http://127.0.0.1:8899/ | grep -o 'data-popkit-slug="[^"]*"'
+data-popkit-slug="e2e-modal"
+```
 
-Do not "fix" it by deleting the fixture. The fixture is what the other exit
-criteria need.
+`Frontend::init()` **is** wired into `Plugin::boot()` as of Phase 2, and
+`Rest_Context::init()` with it, so popkit really does emit markup, config and
+assets here. An earlier version of this section said the opposite and predicted
+that wiring would break `smoke.spec.js`. It did, and the spec was fixed: it now
+drafts every published popup for the duration of the test and republishes them in
+a `finally`, so "zero popups match" is a fact it establishes rather than a
+property of the URL it visits. `seed.php --unpublish` remains available for the
+same purpose from the command line.
+
+When Phase 4 lands, that drafting becomes unnecessary and the spec can assert
+against `/popkit-e2e-clean/` with the fixtures left published. Do not "fix" any
+of this by deleting the fixture — the other exit criteria need it.
 
 ### The admin bar, and byte-identical HTML
 
@@ -218,13 +305,14 @@ plus two stylesheets. Hiding the admin bar is an ordinary site setting, not a
 test-only fiction.
 
 One difference survives and cannot honestly be removed: core adds `logged-in` to
-the `<body>` class list. Measured on `/popkit-e2e/`, anonymous versus
-authenticated, with different user agents:
+the `<body>` class list. Re-measured in Phase 3 on `/popkit-e2e/`, anonymous
+versus authenticated, with different user agents — the popup the page now serves
+is byte-identical across both, and the ten-byte delta is exactly `logged-in `:
 
 ```
-anonymous     68485 bytes
-authenticated 68495 bytes
-1c1
+anonymous     70753 bytes
+authenticated 70763 bytes
+1134c1134
 < <body class="page-template-default page page-id-4 wp-embed-responsive">
 ---
 > <body class="page-template-default page page-id-4 logged-in wp-embed-responsive">
@@ -347,20 +435,27 @@ curl -s -o /dev/null -w "%{http_code}\n" \
   http://127.0.0.1:8899/wp-content/plugins/popkit/dist/frontend.js
 ```
 
-Last observed, with the harness freshly provisioned:
+Last observed in Phase 3, fixtures seeded and published:
 
 | Check | Result |
 |---|---|
-| `/` | 200, 96697 bytes, WordPress rendered |
-| `/popkit-e2e/` | 200, 68485 bytes |
-| `/popkit-e2e-clean/` | 200 |
+| `/` | 200, 98965 bytes, WordPress rendered |
+| `/popkit-e2e/` | 200, 70753 bytes anonymous |
+| `/popkit-e2e-clean/` | 200, 70413 bytes |
 | `/wp-login.php` POST | 302, `wordpress_logged_in` cookie set |
 | `/wp-admin/` authenticated | 200 |
 | `dist/frontend.js` through the junction | 200, `application/javascript`, byte count matching the working tree |
-| `/wp-json/` namespaces | `popkit/v1` present |
-| `npm run test:e2e` from cold | 2 passed, server auto-started and stopped |
+| `/wp-json/` namespaces | `oembed/1.0`, **`popkit/v1`**, `wp/v2`, `wp-site-health/v1`, `wp-block-editor/v1` |
+| `/popkit/v1/context` | 200, `{"time":…,"user":{"state":"logged_out"}}` |
 
-The `popkit/v1` namespace exists and exposes `/popkit/v1/registry`.
-`/popkit/v1/context` was **404** at the time of writing — Phase 2 had not yet
-wired `Rest_Context` into `Plugin::boot()`. Re-run the fourth command once it
-has; nothing in the harness needs to change for it to start answering.
+The `popkit/v1` namespace exposes `/popkit/v1/registry` and `/popkit/v1/context`.
+Both answer. An earlier version of this section recorded context as **404**
+because Phase 2 had not yet wired `Rest_Context::init()` into `Plugin::boot()`;
+it has since, and nothing in the harness needed to change for it to start
+answering.
+
+Those three page sizes are larger than the figures recorded in Phase 0 because
+popkit now emits config, markup and asset tags on every page — see
+[A published popup is emitted on every page](#a-published-popup-is-emitted-on-every-page).
+Treat them as a sanity check on the order of magnitude, not as a fixture: any
+change to the popup's content or the front-end bundle moves them.

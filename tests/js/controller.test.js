@@ -30,7 +30,14 @@
  *    "everyone", which is the worst failure this plugin can have.
  * 4. **Seen is recorded after a successful, non-cancelled open, and never
  *    otherwise.** A cancelled open shows the visitor nothing, so recording it
- *    would spend their single impression on something they never saw.
+ *    would spend their single impression on something they never saw — and the
+ *    record carries the frequency object, because the mode decides whether there
+ *    is anything to write at all.
+ * 5. **Stage 10 is armed with the real triggers, and what a fire means is
+ *    decided here.** Whether a refused open retires the trigger that asked, and
+ *    whether an author's own `popkit.open()` leaves a popup's triggers armed
+ *    behind it, are both this file's decisions and neither is visible from
+ *    `trigger-controller.js`.
  *
  * And one property that is not a decision at all: a mangled config element must
  * cost the site its own popups and nothing else. `readConfig()` is total.
@@ -64,11 +71,46 @@ const POPUP_ID = 7;
 const POPUP_SLUG = 'unit-popup';
 
 /**
+ * Post ID of the second popup, where a test needs two on one page.
+ *
+ * @type {number}
+ */
+const OTHER_ID = 8;
+
+/**
+ * Slug of the second popup.
+ *
+ * @type {string}
+ */
+const OTHER_SLUG = 'other-popup';
+
+/**
  * Storage key `frequency.js` writes a seen record under.
  *
  * @type {string}
  */
 const SEEN_KEY = `popkit:seen:${ POPUP_ID }`;
+
+/**
+ * Class the trigger tests point a `click_selector` at.
+ *
+ * @type {string}
+ */
+const TRIGGER_CLASS = 'donate';
+
+/**
+ * A configured `click_selector` trigger, as the emitted config carries one.
+ *
+ * The real trigger module, armed by the real `armTriggers()`, because what these
+ * tests are about is what the controller does with a trigger that fires — and a
+ * fake one would prove only that the controller can call a function.
+ *
+ * @type {Object}
+ */
+const CLICK_TRIGGER = {
+	type: 'click_selector',
+	values: { selector: `.${ TRIGGER_CLASS }` },
+};
 
 /**
  * Absolute URL of the context route, as the emitted config carries it.
@@ -255,6 +297,98 @@ function writeConfigElement( text ) {
 }
 
 /**
+ * Adds a button for a `click_selector` trigger to match.
+ *
+ * @return {Element} The button, now in the document.
+ */
+function writeButton() {
+	const button = window.document.createElement( 'button' );
+
+	// Never a submit button: jsdom implements no form submission, and the
+	// attempt would reach the console as an unimplemented-navigation error.
+	button.type = 'button';
+	button.className = TRIGGER_CLASS;
+
+	window.document.body.appendChild( button );
+
+	return button;
+}
+
+/**
+ * Dispatches a bubbling, cancellable click, as a visitor's would be.
+ *
+ * @param {Element} target Element to click.
+ * @return {void}
+ */
+function clickOn( target ) {
+	target.dispatchEvent(
+		new window.MouseEvent( 'click', { bubbles: true, cancelable: true } )
+	);
+}
+
+/**
+ * Builds a `pagehide` or `pageshow` event carrying a `persisted` flag.
+ *
+ * `persisted` is the browser saying whether this document is being frozen into
+ * the back/forward cache rather than discarded. jsdom does not implement
+ * `PageTransitionEvent` everywhere, so the flag is defined on a plain event when
+ * the constructor is missing — what is under test is the property the runtime
+ * reads, not the interface it arrived on.
+ *
+ * @param {string}  name      `pagehide` or `pageshow`.
+ * @param {boolean} persisted Whether the document is going into, or coming out
+ *                            of, the back/forward cache.
+ * @return {Object} The event, ready to dispatch.
+ */
+function pageTransition( name, persisted ) {
+	if ( 'function' === typeof window.PageTransitionEvent ) {
+		return new window.PageTransitionEvent( name, { persisted } );
+	}
+
+	const event = new window.Event( name );
+
+	Object.defineProperty( event, 'persisted', { value: persisted } );
+
+	return event;
+}
+
+/**
+ * Builds one emitted popup entry.
+ *
+ * @param {Object} [overrides] Fields to override on the entry.
+ * @return {Object} Emitted popup entry.
+ */
+function popupEntry( overrides ) {
+	return {
+		id: POPUP_ID,
+		slug: POPUP_SLUG,
+		conditions: { groups: [] },
+		triggers: [],
+		schedule: {},
+		frequency: {},
+		display: {},
+		...overrides,
+	};
+}
+
+/**
+ * Builds an emitted config carrying the given popup entries.
+ *
+ * @param {Object[]} popups      Emitted popup entries.
+ * @param {Object}   [overrides] Fields to override on the config itself.
+ * @return {Object} Emitted config object.
+ */
+function configOf( popups, overrides ) {
+	return {
+		restUrl: REST_URL,
+		siteTimezone: SITE_ZONE,
+		needsContext: false,
+		popups,
+		...overrides,
+	};
+}
+
+/**
  * Builds an emitted config carrying exactly one popup.
  *
  * @param {Object} [popup]     Fields to override on the popup entry.
@@ -262,24 +396,7 @@ function writeConfigElement( text ) {
  * @return {Object} Emitted config object.
  */
 function configFor( popup, overrides ) {
-	return {
-		restUrl: REST_URL,
-		siteTimezone: SITE_ZONE,
-		needsContext: false,
-		popups: [
-			{
-				id: POPUP_ID,
-				slug: POPUP_SLUG,
-				conditions: { groups: [] },
-				triggers: [],
-				schedule: {},
-				frequency: {},
-				display: {},
-				...popup,
-			},
-		],
-		...overrides,
-	};
+	return configOf( [ popupEntry( popup ) ], overrides );
 }
 
 /**
@@ -322,6 +439,15 @@ beforeEach( () => {
 } );
 
 afterEach( () => {
+	/*
+	 * Anything a test left armed is torn down here rather than carried into the
+	 * next one. jsdom keeps one window and one document for the whole file, so a
+	 * delegated `click` listener from an armed `click_selector` would outlive the
+	 * module instance that bound it and go on matching buttons for the rest of
+	 * the run. Not `persisted`, because this page really is going away.
+	 */
+	window.dispatchEvent( pageTransition( 'pagehide', false ) );
+
 	for ( const { name, handler } of listeners ) {
 		window.document.removeEventListener( name, handler );
 	}
@@ -675,6 +801,28 @@ describe( 'openRecord -> when a popup counts as seen', () => {
 		expect( Number.isFinite( stored.at ) ).toBe( true );
 	} );
 
+	it( 'writes no record for an uncapped popup, whose storage is "none"', async () => {
+		const { boot } = await loadController();
+		const element = writePopup( POPUP_ID, POPUP_SLUG );
+
+		boot( configFor( { frequency: { mode: 'always' } } ) );
+		await flush();
+
+		// It opened, so the write was reached and declined rather than missed.
+		expect( element.hidden ).toBe( false );
+
+		/*
+		 * `data-model.md` gives `always` a storage of "none", and the write can
+		 * only honour that if the open tells it the mode — the storage key
+		 * carries no copy of one. A record written here is one nothing ever
+		 * reads, and it outlives the setting that produced it: an author
+		 * switching this popup to `once_ever` would find it already suppressed
+		 * for every visitor who saw it while it was uncapped, by impressions the
+		 * cap was never meant to count.
+		 */
+		expect( seenRecords() ).toEqual( { local: null, session: null } );
+	} );
+
 	it( 'writes no record when the markup for the popup is absent', async () => {
 		const { boot } = await loadController();
 		const events = recordEvents();
@@ -706,5 +854,144 @@ describe( 'openRecord -> when a popup counts as seen', () => {
 		// the stored timestamp is not refreshed by a pageview nobody saw.
 		expect( names( events ) ).toEqual( [] );
 		expect( element.hidden ).toBe( true );
+	} );
+} );
+
+describe( 'boot -> stage 10, the triggers the controller armed', () => {
+	it( 'opens the popup when a configured trigger fires', async () => {
+		const { boot } = await loadController();
+		const element = writePopup( POPUP_ID, POPUP_SLUG );
+		const button = writeButton();
+
+		boot( configFor( { triggers: [ CLICK_TRIGGER ] } ) );
+		await flush();
+
+		// Armed, and nothing has fired: a configured trigger list is honoured as
+		// written, so this popup does not open on load.
+		expect( element.hidden ).toBe( true );
+
+		clickOn( button );
+
+		// The control for every refusal below. Without it each of them would
+		// pass against a runtime that had stopped arming triggers at all.
+		expect( element.hidden ).toBe( false );
+	} );
+
+	it( 'disarms a popup its own triggers armed when the author opens it', async () => {
+		const { boot } = await loadController();
+		const element = writePopup( POPUP_ID, POPUP_SLUG );
+		const button = writeButton();
+		const events = recordEvents();
+
+		boot( configFor( { triggers: [ CLICK_TRIGGER ] } ) );
+		await flush();
+
+		expect( window.popkit.open( POPUP_SLUG ) ).toBe( true );
+		expect( element.hidden ).toBe( false );
+		expect( window.popkit.close( POPUP_SLUG ) ).toBe( true );
+		expect( element.hidden ).toBe( true );
+
+		clickOn( button );
+
+		/*
+		 * `trigger-controller.js` tears a popup's triggers down when one of them
+		 * fires, and a programmatic open is the one open it cannot see. Leaving
+		 * them armed lets a click after the visitor dismissed an author-opened
+		 * popup put it straight back on screen — and the frequency cap does not
+		 * catch it, because stage 9 ran once, at arming time, and a fire does not
+		 * re-run it.
+		 */
+		expect( element.hidden ).toBe( true );
+		expect( names( events ) ).toEqual( [
+			'popkit:before-open',
+			'popkit:open',
+			'popkit:close',
+		] );
+	} );
+
+	it( 'keeps a trigger armed when another popup was on screen', async () => {
+		const { boot } = await loadController();
+		const first = writePopup( POPUP_ID, POPUP_SLUG );
+		const second = writePopup( OTHER_ID, OTHER_SLUG );
+		const button = writeButton();
+
+		boot(
+			configOf( [
+				popupEntry(),
+				popupEntry( {
+					id: OTHER_ID,
+					slug: OTHER_SLUG,
+					triggers: [ CLICK_TRIGGER ],
+				} ),
+			] )
+		);
+		await flush();
+
+		// The untriggered popup opened on load, and now holds the screen.
+		expect( first.hidden ).toBe( false );
+
+		clickOn( button );
+
+		// One popup at a time. An automatic open is skipped while anything is
+		// already showing, and it is not queued for later either.
+		expect( second.hidden ).toBe( true );
+
+		window.popkit.close( POPUP_SLUG );
+		clickOn( button );
+
+		/*
+		 * But the trigger is still armed. "Another popup was on screen" is a
+		 * refusal that may not hold next time, and treating it as the popup's one
+		 * chance retires a trigger the visitor is still able to use — the button
+		 * stays on the page and stops doing anything, with nothing to explain it.
+		 */
+		expect( second.hidden ).toBe( false );
+	} );
+
+	it( 'does not offer the veto twice for a trigger it already refused', async () => {
+		const { boot } = await loadController();
+		const element = writePopup( POPUP_ID, POPUP_SLUG );
+		const button = writeButton();
+		const events = recordEvents();
+
+		onDocument( 'popkit:before-open', ( event ) => event.preventDefault() );
+
+		boot( configFor( { triggers: [ CLICK_TRIGGER ] } ) );
+		await flush();
+
+		clickOn( button );
+		clickOn( button );
+
+		/*
+		 * A cancelled open settles the popup. Re-arming on a veto would ask a
+		 * consent integration the same question on every click, every scroll
+		 * event, and every fire of every sibling trigger — which is the load the
+		 * first-fire-wins latch exists to prevent, and the reason it cannot
+		 * simply be "did the popup open".
+		 */
+		expect( names( events ) ).toEqual( [ 'popkit:before-open' ] );
+		expect( element.hidden ).toBe( true );
+	} );
+
+	it( 'keeps a popup working across a back/forward cache round trip', async () => {
+		const { boot } = await loadController();
+		const element = writePopup( POPUP_ID, POPUP_SLUG );
+		const button = writeButton();
+
+		boot( configFor( { triggers: [ CLICK_TRIGGER ] } ) );
+		await flush();
+
+		/*
+		 * The visitor followed a link and pressed Back. The same document comes
+		 * out of the back/forward cache with the same DOM and no script re-run,
+		 * so a `pagehide` treated as final leaves every popup on the restored
+		 * page inert — and nothing on screen says why the button stopped working.
+		 */
+		window.dispatchEvent( pageTransition( 'pagehide', true ) );
+		window.dispatchEvent( pageTransition( 'pageshow', true ) );
+
+		clickOn( button );
+
+		expect( element.hidden ).toBe( false );
 	} );
 } );
