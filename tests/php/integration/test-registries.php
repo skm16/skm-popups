@@ -32,6 +32,32 @@
  * the failure `Popkit\Plugin::boot_registries()` exists to prevent, because
  * every registration attached after that point is silently dropped.
  *
+ * ## Why the fixtures here are fixtures, and what now guards the real registry
+ *
+ * Every condition this file builds is deliberately synthetic, and each one is
+ * standing in for a *third party* rather than for a built-in:
+ *
+ * - {@see Test_Popkit_Registries::sample_condition()} is what an extension
+ *   registers. The question it answers — does a condition popkit has never heard
+ *   of survive the action, the registry and the REST route untouched? — can only
+ *   be asked with a key popkit does not ship. Substituting `device` would test
+ *   the built-in set instead and would answer nothing about extensibility.
+ * - {@see Test_Popkit_Registries::condition()} and
+ *   {@see Test_Popkit_Registries::trigger()} feed registries built with `new`.
+ *   Those tests are about the container — storage, retrieval, ordering, the
+ *   refusal of a duplicate key — and a container behaves the same whatever is put
+ *   in it. Using the real built-ins there would couple assertions about `all()`
+ *   to whichever conditions v1 happens to ship.
+ *
+ * That reasoning is sound and it was also the blind spot. Phase 4 registered its
+ * seven server conditions and none of its five client ones, and this file did not
+ * notice, because wherever it needed a client-context condition it registered one
+ * of its own. {@see Test_Popkit_Registries::test_the_shared_registry_carries_every_builtin_condition()}
+ * closes that gap: it reads the shared registry the plugin built and checks it
+ * against a list written out below, so a missing built-in fails here as well as
+ * in tests/php/integration/test-builtin-conditions.php, which owns the full
+ * schema and emission assertions.
+ *
  * @package Popkit
  */
 
@@ -75,6 +101,49 @@ final class Test_Popkit_Registries extends WP_UnitTestCase {
 	 * @var string
 	 */
 	public const TRIGGER_LABEL = 'Registry test trigger';
+
+	/**
+	 * Every condition key popkit itself must register, transcribed from the data model.
+	 *
+	 * Written out here rather than read back from the registry, and written out
+	 * again in tests/php/integration/test-builtin-conditions.php rather than
+	 * shared between the two files. Both choices are deliberate. A list derived
+	 * from the registry agrees with a registry that is missing five entries; a
+	 * list shared between two test files means one edit changes what both of them
+	 * accept, which is the same problem wearing a different hat.
+	 *
+	 * The first seven are `Context::Server` and the last five are
+	 * `Context::Client`. That split is asserted where the schemas are, in
+	 * test-builtin-conditions.php; membership alone is asserted here.
+	 *
+	 * @var string[]
+	 */
+	public const BUILTIN_CONDITION_KEYS = array(
+		'post_type',
+		'post_ids',
+		'taxonomy_term',
+		'is_front_page',
+		'is_404',
+		'template',
+		'url_path',
+		'device',
+		'user_state',
+		'referrer',
+		'utm',
+		'visit_history',
+	);
+
+	/**
+	 * A built-in condition that is decided in the browser rather than in PHP.
+	 *
+	 * Used wherever this file needs a *real* client-context registration, as
+	 * opposed to the third-party fixture. `device` is the plainest of the five: one
+	 * integer field, no context round trip, and nothing about it varies with the
+	 * WordPress install.
+	 *
+	 * @var string
+	 */
+	public const BUILTIN_CLIENT_CONDITION = 'device';
 
 	/**
 	 * Times `popkit_register_conditions` has fired in this PHP process.
@@ -131,6 +200,16 @@ final class Test_Popkit_Registries extends WP_UnitTestCase {
 	 * Client context and the `visitor` group deliberately: an extension is most
 	 * likely to describe the person rather than the page, and a client-context
 	 * registration is the one the server must defer on rather than reject.
+	 *
+	 * **A fixture is correct here, and a built-in would be wrong.** The question
+	 * this condition exists to answer is whether a key popkit has never heard of
+	 * survives the registration action, the registry and the REST route with its
+	 * schema intact — the extensibility contract in `docs/CLAUDE.md` -> Registry
+	 * invariants. Asking it with `device` would assert something about popkit's own
+	 * set and nothing at all about a third party's. What a fixture must never do is
+	 * stand in for a built-in whose presence nothing else checks, which is why
+	 * {@see Test_Popkit_Registries::test_the_shared_registry_carries_every_builtin_condition()}
+	 * exists.
 	 *
 	 * @return Condition
 	 */
@@ -434,6 +513,74 @@ final class Test_Popkit_Registries extends WP_UnitTestCase {
 			'A trigger registered from popkit_register_triggers is not in the registry.'
 		);
 		$this->assertSame( self::TRIGGER_KEY, $triggers->get( self::TRIGGER_KEY )->key, 'The registered trigger came back under a different key.' );
+
+		/*
+		 * The fixture above is not the only client-context registration this test
+		 * is entitled to see. popkit registers five of its own through the same
+		 * action, and asserting one of them here is what stops this test from
+		 * reporting a healthy client-context pipeline that consists entirely of
+		 * its own fixture.
+		 */
+		$builtin = $conditions->get( self::BUILTIN_CLIENT_CONDITION );
+
+		$this->assertInstanceOf(
+			Condition::class,
+			$builtin,
+			sprintf(
+				'The built-in client condition "%s" is not in the registry, so the only client-context condition this test can see is the one it registered itself. That is exactly how five unregistered built-ins went unnoticed through 953 passing PHP tests.',
+				self::BUILTIN_CLIENT_CONDITION
+			)
+		);
+		$this->assertSame(
+			Context::Client,
+			$builtin->context,
+			sprintf( 'The built-in condition "%s" is registered as a server condition. It varies by visitor, so judging it in PHP would vary the cached response by device.', self::BUILTIN_CLIENT_CONDITION )
+		);
+	}
+
+	/**
+	 * The shared registry carries every condition popkit itself ships.
+	 *
+	 * This is the assertion whose absence let Phase 4 ship with its five client
+	 * conditions declared in JavaScript and registered nowhere. Everything else in
+	 * this file works on a registry it filled itself, so all of it stayed green
+	 * while `device`, `user_state`, `referrer`, `utm` and `visit_history` were
+	 * missing from the registry the plugin actually built — and a rule of an
+	 * unregistered type is emitted tagged `unknown`, which the front-end controller
+	 * denies before it looks up an evaluator.
+	 *
+	 * The list is checked in full rather than key by key so a partial registration
+	 * reports every key it dropped. Membership is asserted rather than equality
+	 * with the whole registry, because this file and several others register
+	 * fixture conditions into the same process-wide instance.
+	 *
+	 * Field schemas, contexts, groups, the JavaScript pairing and the emitted
+	 * `unknown` tag are asserted in tests/php/integration/test-builtin-conditions.php.
+	 * What is asserted here is the narrower thing this file was in a position to
+	 * notice and did not: that they are registered at all.
+	 *
+	 * @return void
+	 */
+	public function test_the_shared_registry_carries_every_builtin_condition() {
+		$registry = popkit_conditions();
+		$missing  = array();
+
+		foreach ( self::BUILTIN_CONDITION_KEYS as $key ) {
+			if ( ! $registry->is_registered( $key ) ) {
+				$missing[] = $key;
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$missing,
+			'Conditions popkit documents as built in are absent from the registry it built. Every rule of a missing type is indeterminate on the server, emitted tagged unknown, and denied in the browser, so no popup targeted by one can open on any page.'
+		);
+
+		$this->assertFalse(
+			$registry->is_registered( 'user_role' ),
+			'The condition "user_role" is deferred to 1.1 in docs/data-model.md. The context endpoint returns a login boolean and nothing else, so a rule of this type could never be evaluated.'
+		);
 	}
 
 	/**
@@ -491,6 +638,15 @@ final class Test_Popkit_Registries extends WP_UnitTestCase {
 
 	/**
 	 * Builds a condition for a fresh registry.
+	 *
+	 * A fixture is correct here for a different reason than on
+	 * {@see Test_Popkit_Registries::sample_condition()}: the tests using this one
+	 * assert the behaviour of the *container* — storage, retrieval, registration
+	 * order, the copy `all()` hands out, and the refusal of a duplicate key — and a
+	 * container behaves identically whatever is put into it. Filling those
+	 * registries with the real built-ins would tie an assertion about `all()` to
+	 * whichever conditions v1 happens to ship and would break every time the set
+	 * changed, while proving nothing extra about the registry.
 	 *
 	 * @param string $key   Registry key.
 	 * @param string $label Editor label.

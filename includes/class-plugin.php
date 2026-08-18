@@ -169,11 +169,11 @@ final class Plugin {
 	/**
 	 * Extension point: condition and trigger registries.
 	 *
-	 * Loads the plugin's public accessor functions and registers nothing else.
-	 * Phase 1 ships no built-in conditions or triggers — those arrive alongside
-	 * the front-end runtime in Phases 3 and 4 — so both registries start empty and
-	 * are filled by whoever hooks `popkit_register_conditions` or
-	 * `popkit_register_triggers`.
+	 * Loads the plugin's public accessor functions, then queues popkit's own
+	 * built-in registrations. Neither registry is filled here; each of the three
+	 * `init()` calls below attaches a callback to `popkit_register_conditions` or
+	 * `popkit_register_triggers` and returns, so popkit's own conditions and
+	 * triggers join the same queue a third party's do.
 	 *
 	 * `includes/functions.php` declares `popkit_conditions()` and
 	 * `popkit_triggers()` in the global namespace, which means it declares no
@@ -198,18 +198,47 @@ final class Plugin {
 	 * first genuine consumer is what keeps every documented registration point
 	 * working.
 	 *
-	 * {@see \Popkit\Triggers\Builtin_Triggers::init()} is the same shape: it
-	 * attaches a callback to `popkit_register_triggers` and registers nothing
-	 * yet, so calling it here adds popkit's own four triggers to the queue of
-	 * registrations without forcing the registry open ahead of anybody else's.
+	 * {@see \Popkit\Triggers\Builtin_Triggers::init()} is that shape: it attaches a
+	 * callback to `popkit_register_triggers` and registers nothing yet, so calling
+	 * it here adds popkit's own four triggers to the queue of registrations
+	 * without forcing the registry open ahead of anybody else's.
+	 * {@see \Popkit\Conditions\Content_Conditions::init()},
+	 * {@see \Popkit\Conditions\Url_Conditions::init()} and
+	 * {@see \Popkit\Conditions\Client_Conditions::init()} do the same for the
+	 * twelve built-in conditions. All three are called, and all three must be:
+	 * they own different keys — content owns `post_type`, `post_ids`,
+	 * `taxonomy_term`, `is_front_page` and `is_404`, URL owns `template` and
+	 * `url_path`, client owns `device`, `user_state`, `referrer`, `utm` and
+	 * `visit_history` — so dropping any one leaves rules of those types
+	 * unregistered, indeterminate on the server and then failed closed in the
+	 * browser. The popup would simply stop appearing, and nothing would say why.
 	 *
-	 * That call is unguarded like every other in this class. A `class_exists()`
-	 * check around it would read as caution and behave as silent degradation: on
-	 * an incomplete deploy the site would boot, the editor would offer no trigger
-	 * at all, and every saved trigger config would sanitize against an empty
-	 * registry — with nothing anywhere saying why. No test protects that site,
-	 * because a test only ever runs against a tree where the file is present. A
-	 * missing first-party class is a broken install and reports itself as one.
+	 * The client registration is the one whose absence is hardest to notice, so it
+	 * is worth naming what it does. Nothing decides those five in PHP — by
+	 * construction, since they describe the visitor rather than the URL — which
+	 * makes it tempting to read the registration as cosmetic. It is not. An
+	 * unregistered type is emitted tagged `unknown`, and the browser denies a
+	 * tagged rule before it looks up an evaluator, so the five JavaScript modules
+	 * that implement these conditions would be unreachable and no popup targeted
+	 * by device, login state, referrer, campaign parameter or visit history could
+	 * open on any page. Registration is also what puts their stored values on the
+	 * schema-derived sanitizer, per `CLAUDE.md` -> Registry invariants.
+	 *
+	 * All four calls are unguarded, like every other in this class. A
+	 * `class_exists()` check around one would read as caution and behave as silent
+	 * degradation: on an incomplete deploy the site would boot, the editor would
+	 * offer no trigger or no condition at all, and every saved config would
+	 * sanitize against a half-empty registry — with nothing anywhere saying why.
+	 * No test protects that site, because a test only ever runs against a tree
+	 * where the file is present. A missing first-party class is a broken install
+	 * and reports itself as one.
+	 *
+	 * The conditions carry no evaluator with them, and are not asked to. Which
+	 * server rules are decided, and by what, belongs to the request that emits
+	 * them; {@see \Popkit\Frontend::evaluate_server_rule()} is where the two
+	 * server classes are consulted. The client class supplies no evaluator at all,
+	 * to anybody, which is what keeps a visitor-dependent decision out of a
+	 * cacheable response.
 	 *
 	 * @since 0.1.0
 	 *
@@ -218,6 +247,9 @@ final class Plugin {
 	private function boot_registries(): void {
 		require_once POPKIT_DIR . 'includes/functions.php';
 
+		Conditions\Content_Conditions::init();
+		Conditions\Url_Conditions::init();
+		Conditions\Client_Conditions::init();
 		Triggers\Builtin_Triggers::init();
 	}
 

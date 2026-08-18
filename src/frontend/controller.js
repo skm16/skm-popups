@@ -34,13 +34,36 @@
  * The single exception is the frequency cap, which fails open when browser
  * storage throws. That decision and its reasoning live in `frequency.js`.
  *
- * ## Stage 7 is a stub in this phase, and it is a closed one
+ * ## Stage 7 denies whatever it cannot evaluate
  *
- * No client conditions are registered until Phase 4, so {@link CLIENT_RULES} is
- * empty and every emitted rule is unresolvable. The consequence is deliberate:
- * in Phase 2 a popup carrying any client rule never opens. Stubbing the stage
- * to "pass" would have been the same number of characters and would have shown
- * every targeted popup to everybody for the length of a phase.
+ * `CLIENT_CONDITIONS`, in `conditions/index.js`, holds v1's five client
+ * conditions and owns the contract their modules implement — including the one
+ * that matters here, that an evaluator answers `true`, answers `false`, or
+ * returns something else meaning it could not answer. A rule either resolves to
+ * one of those modules or does not resolve at all, and that is the whole of the
+ * stage: a resolved rule is evaluated and then negated if it asked to be, and an
+ * unresolved one is denied with `negate` left unapplied.
+ *
+ * That registry sits beside its modules while {@link TRIGGERS} is spelled out in
+ * this file, and the asymmetry is worth naming rather than dressing up: it is
+ * where two authors drew the line differently, and neither placement is wrong.
+ * The property that actually matters is the one Phase 3 established when it
+ * deleted `triggers/index.js` — a registry nothing imports is dead code.
+ * `conditions/index.js` has exactly one consumer, this file. If stage 7 ever
+ * stops consulting it, delete it rather than leave it looking load bearing.
+ *
+ * Whether a condition needs the context payload is the condition's own
+ * declaration, and a rule that needs it is denied **before** its evaluator runs
+ * rather than inside it. That is what keeps "I could not answer" out of the
+ * evaluator's return value, where it would arrive as `false` — indistinguishable
+ * from an answer of "no", and `negate` would turn it into "yes". The two cases
+ * are separated at the one point that knows the difference; see
+ * {@link ruleAllows}.
+ *
+ * The context payload is all-or-nothing before it reaches this stage.
+ * `context.js` discards a response with any requested key missing or malformed,
+ * so a payload that is not null carries every field that was asked for, and
+ * there is no half-answered context for a condition to misread.
  *
  * ## Stage 10, and what an empty trigger list means
  *
@@ -89,6 +112,7 @@
 
 import { installApi } from './api.js';
 import { createClock } from './clock.js';
+import { CLIENT_CONDITIONS } from './conditions/index.js';
 import { fetchContext } from './context.js';
 import { closePopup, isPopupOpen, openPopup } from './dialog.js';
 import { emitBeforeOpen, emitClose, emitOpen } from './events.js';
@@ -131,21 +155,16 @@ const CONTEXT_FIELDS = {
  * matches it as a literal: a rule's `type` is stored verbatim and has to be
  * recognisable whether or not anything has registered a condition under it.
  *
+ * Read twice, for the two halves of one decision. {@link hasUserStateRule} uses
+ * it to work out whether this page must pay for the round trip at all, which is
+ * the same question `Popkit\Frontend::rule_set_needs_context()` answers from the
+ * same literal — so client and server ask for and expect the same fields.
+ * {@link ruleAllows} uses it to deny the rule when the payload did not arrive,
+ * independently of what `user-state.js` declares about itself.
+ *
  * @type {string}
  */
 const USER_STATE_RULE = 'user_state';
-
-/**
- * Client-context rule evaluators, keyed by rule type.
- *
- * Empty until Phase 4 registers the built-in client conditions. An absent
- * evaluator is not a gap to be worked around — it is the fail-closed path
- * `docs/data-model.md` -> Evaluation semantics requires, and it is why this map
- * is consulted rather than bypassed while it is empty.
- *
- * @type {Map<string, Function>}
- */
-const CLIENT_RULES = new Map();
 
 /**
  * Trigger modules, keyed by the key each module declares for itself.
@@ -597,6 +616,27 @@ function conditionsAllow( conditions, context ) {
  * was built, and a JavaScript evaluator that turned up without its PHP
  * declaration is not evidence that the author's targeting is understood.
  *
+ * There are five ways to be unresolvable and they are all the same denial: no
+ * module under this `type`, a module with no callable `evaluate`, a declared
+ * need for context that is not there, an evaluator that threw, and an evaluator
+ * that returned something other than a boolean. The last is how a module says
+ * "I could not tell" without saying "no", and it is the reason the contract asks
+ * for a non-boolean rather than a `false` — see {@link CLIENT_CONDITIONS}.
+ *
+ * The context check reads the condition's declaration **or** the one rule type
+ * known to need the route. That is not a redundant second source of truth: it is
+ * the same {@link USER_STATE_RULE} literal `Popkit\Frontend` matches to set the
+ * page-level flag, and stating it here means the single most safety-critical
+ * denial in the plugin does not depend on a property in another file being
+ * spelled correctly. A `user_state` rule with no payload is denied whether or
+ * not `user-state.js` remembered to declare itself.
+ *
+ * Note what is *not* denied: a rule whose condition needs no context evaluates
+ * normally even when the fetch failed. A popup targeted by device width has no
+ * stake in a context request some other popup on the page needed, and
+ * suppressing it would let one popup's outage silently narrow another's
+ * audience.
+ *
  * @param {*}           rule    Emitted rule.
  * @param {Object|null} context Context payload, or null when unavailable.
  * @return {boolean} True only when a registered evaluator affirmatively passed it.
@@ -606,16 +646,23 @@ function ruleAllows( rule, context ) {
 		return false;
 	}
 
-	const evaluate = CLIENT_RULES.get( rule.type );
+	const condition = CLIENT_CONDITIONS.get( rule.type );
 
-	if ( 'function' !== typeof evaluate ) {
+	if ( 'function' !== typeof condition?.evaluate ) {
+		return false;
+	}
+
+	if (
+		( true === condition.needsContext || USER_STATE_RULE === rule.type ) &&
+		! isObject( context )
+	) {
 		return false;
 	}
 
 	let result;
 
 	try {
-		result = evaluate( rule.values, context );
+		result = condition.evaluate( rule.values, context );
 	} catch {
 		return false;
 	}

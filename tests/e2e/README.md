@@ -83,13 +83,15 @@ A plain run deletes every `popkit_popup` post first — in every status, includi
 not merge with what it finds, and `--publish` will not republish a popup it did
 not create.
 
-That matters more than it sounds. Because no built-in server condition is
-registered yet, every stored rule is indeterminate and any *published* popup
-matches every URL, so one popup abandoned by a crashed spec silently changes the
-meaning of every "exactly N popups" assertion in the suite. When seeding merely
-upserted by slug, that leftover survived into the next run and `--publish` put it
-back on screen. Three consecutive full runs disagreed with each other before the
-cause was found.
+That matters more than it sounds. A published popup carrying no *server* rule
+survives server-side matching on every URL — most spec fixtures are exactly that,
+since a client rule is one the server may not judge — so one popup abandoned by a
+crashed spec silently changes the meaning of every "exactly N popups" assertion
+in the suite. When seeding merely upserted by slug, that leftover survived into
+the next run and `--publish` put it back on screen. Three consecutive full runs
+disagreed with each other before the cause was found. Phase 4 narrowed this but
+did not remove it: registering the built-in server conditions confines a leftover
+that has a server rule, and does nothing about one that does not.
 
 Every mode prints an inventory afterwards — count, slugs, statuses, stored meta,
 and a `FOREIGN` marker against anything that is not a seed fixture. A run's
@@ -170,11 +172,12 @@ Elements inside the fixture page and popup carry `data-testid` attributes:
 `popkit-e2e-trigger`, `popkit-e2e-background-link`, `popkit-e2e-second-trigger`,
 `popkit-e2e-inside-one`, `popkit-e2e-inside-two`, `popkit-e2e-convert`.
 
-`e2e-modal` targets `/popkit-e2e/` with a `url_path` rule. **That rule does
-nothing yet** — Phase 4 registers the built-in server conditions, and until then
-every rule is indeterminate, so the popup survives server-side matching on every
-URL. The rule is seeded now so the fixture narrows to its page automatically when
-Phase 4 lands, without the fixture changing.
+`e2e-modal` targets `/popkit-e2e/` with a `url_path` rule. **That rule now
+decides.** Phase 4 registered the built-in server conditions, so the fixture is
+emitted on `/popkit-e2e/` and is absent from every other URL — markup, config and
+all. It was seeded with the rule ahead of that phase precisely so the fixture
+narrowed to its page without the fixture itself changing, and
+`conditions.spec.js` asserts both halves of that.
 
 `e2e-modal` always holds the **lowest post ID of any popup**, which
 `accessibility.spec.js` relies on to reason about which popup is considered
@@ -265,33 +268,47 @@ with tracing off. The config uses
 console and screenshots, and loses only the time-travel DOM viewer. Re-test the
 plain string after a Playwright or Chromium bump.
 
-### A published popup is emitted on every page
+### A published popup is emitted only where its server rules allow
 
-Until Phase 4 registers the built-in server conditions, every stored rule is
-indeterminate, so every published popup survives server-side matching on every
-URL. The emitted-nothing assertions therefore hold only when **no popup is
-published at all**, not when the visited page is one the popup does not target.
+As of Phase 4 the built-in server conditions are registered and genuinely decide.
+A popup whose `url_path`, `post_type`, `post_ids`, `taxonomy_term`, `template`,
+`is_front_page` or `is_404` rule fails is absent from the response *entirely* —
+markup, config and all — so its slug occurs nowhere in the bytes the visitor
+received. `conditions.spec.js` asserts exactly that, and asserts the mirror on
+the page the rule does match.
 
-Still true as of Phase 3, and easy to see for yourself — the seeded fixture is
-served on the front page, which it does not target:
+Check it by hand with the fixtures published: the seeded fixture targets
+`/popkit-e2e/`, so the first command below prints its slug and the second prints
+nothing at all.
 
-```console
-$ curl -s http://127.0.0.1:8899/ | grep -o 'data-popkit-slug="[^"]*"'
-data-popkit-slug="e2e-modal"
+```bash
+curl -s http://127.0.0.1:8899/popkit-e2e/ | grep -o 'data-popkit-slug="[^"]*"'
+curl -s http://127.0.0.1:8899/ | grep -o 'data-popkit-slug="[^"]*"'
 ```
+
+Two consequences, pulling in opposite directions, and a spec needs both:
+
+- **A popup with no server rule still survives on every URL.** An empty rule set,
+  or a rule set carrying only client conditions — `device`, `user_state`,
+  `referrer`, `utm`, `visit_history` — leaves the server nothing it may judge, so
+  it defers and emits the markup for the browser to decide on. An
+  emitted-nothing assertion therefore still needs the popups either unpublished
+  or narrowed by a *server* rule. "The visited page is not the one it targets"
+  only holds when a server rule says so.
+- **Drafting the fixtures is no longer the only way to reach zero.**
+  `smoke.spec.js` drafts every published popup and republishes them in a
+  `finally`, which was the only honest way to establish "zero popups match" while
+  every rule was indeterminate; its own header notes that Phase 4 makes an
+  assertion against `/popkit-e2e-clean/` with the fixtures left published say the
+  same thing. `seed.php --unpublish` remains available for the same purpose from
+  the command line.
 
 `Frontend::init()` **is** wired into `Plugin::boot()` as of Phase 2, and
 `Rest_Context::init()` with it, so popkit really does emit markup, config and
-assets here. An earlier version of this section said the opposite and predicted
-that wiring would break `smoke.spec.js`. It did, and the spec was fixed: it now
-drafts every published popup for the duration of the test and republishes them in
-a `finally`, so "zero popups match" is a fact it establishes rather than a
-property of the URL it visits. `seed.php --unpublish` remains available for the
-same purpose from the command line.
-
-When Phase 4 lands, that drafting becomes unnecessary and the spec can assert
-against `/popkit-e2e-clean/` with the fixtures left published. Do not "fix" any
-of this by deleting the fixture — the other exit criteria need it.
+assets on any page a popup survives on. An earlier version of this section said
+the opposite and predicted that wiring would break `smoke.spec.js`. It did, and
+the spec was fixed. Do not "fix" any of this by deleting the fixture — the other
+exit criteria need it.
 
 ### The admin bar, and byte-identical HTML
 
@@ -455,7 +472,51 @@ it has since, and nothing in the harness needed to change for it to start
 answering.
 
 Those three page sizes are larger than the figures recorded in Phase 0 because
-popkit now emits config, markup and asset tags on every page — see
-[A published popup is emitted on every page](#a-published-popup-is-emitted-on-every-page).
+popkit emits config, markup and asset tags on any page a popup survives on — see
+[A published popup is emitted only where its server rules allow](#a-published-popup-is-emitted-only-where-its-server-rules-allow).
+Phase 4 moved two of them back down: the fixture's `url_path` rule now decides,
+so `/` and `/popkit-e2e-clean/` carry no popup and none of popkit's markup.
 Treat them as a sanity check on the order of magnitude, not as a fixture: any
 change to the popup's content or the front-end bundle moves them.
+
+## Known: the form-login test crashes Chromium on Windows
+
+`conditions.spec.js` → *"user_state opens for the state the visitor is in, on
+both sides of a login"* fails locally on Windows with:
+
+```
+Error: locator.fill: Target crashed
+  - waiting for locator('#user_login')
+```
+
+**This is a harness limitation, not a plugin defect, and not a test defect.**
+It reproduces in a bare Playwright script with no test code, no init scripts and
+no fixtures — navigate to `wp-login.php`, call `.fill()`, and the renderer
+process dies. popkit is not involved: it emits nothing on the login screen
+(`popkit-config`, asset tags and popup roots are all absent from that response,
+which is correct and is worth keeping that way).
+
+The cause is the server, not the browser. `php -S` on Windows is single
+threaded — `PHP_CLI_SERVER_WORKERS` forks and so does not exist there, as
+`serve.mjs` documents. `wp-login.php` pulls several same-origin subresources,
+and Chromium holds connections open while the server can only answer one at a
+time.
+
+The test is written the way it is on purpose: it logs in through the **real
+form** rather than injecting a cookie, because the failure `CLAUDE.md`
+describes — `rest_cookie_check_errors()` making the context route report
+`logged_out` for everybody — is invisible to a fabricated session. Do not
+"fix" it by swapping in a cookie; that would delete the only test that proves
+the plugin's most important security behaviour.
+
+What to do:
+
+- **On Linux CI it does not occur** — workers fork, so the server is concurrent.
+  The GitHub Actions job is the authority for this test.
+- Locally, treat 1 failure out of 104 in this specific test as expected. Every
+  other login-adjacent assertion still runs: `routeState()` reads the context
+  route directly over `page.request` and is unaffected.
+- If it needs to pass on Windows, put a concurrent server in front of the
+  WordPress tree (nginx, Caddy, or `php-cgi` behind a reverse proxy) and point
+  `WP_BASE_URL` at it. Do not add retries — a renderer crash is not flake and
+  retrying it hides the next real one.

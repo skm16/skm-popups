@@ -27,11 +27,14 @@ defined( 'ABSPATH' ) || exit;
  * 5. Enqueue `dist/frontend.js` and `dist/frontend.css` only if at least one
  *    popup survived.
  *
- * Stage 2 currently rejects nothing, because no built-in server conditions are
- * registered until Phase 4 and {@see Rule_Evaluator} treats an unjudged rule as
- * indeterminate. The call is still made rather than skipped: writing "everything
- * passes for now" into this class would mean writing the real call later, in a
- * phase whose diff is about conditions and where a missing gate is easy to miss.
+ * Stage 2 is a real gate. {@see Frontend::evaluate_server_rule()} is the
+ * evaluator {@see Rule_Evaluator} was built to accept, so a stored
+ * `Context::Server` rule is genuinely decided while the response is generated: a
+ * popup whose every group fails is omitted entirely — no entry in the config, no
+ * markup, and no assets at all if it was the only candidate. The same evaluator
+ * is passed to {@see Rule_Evaluator::strip_server_rules()}, which is what keeps
+ * the judgement that fails a group and the judgement that strips a rule from
+ * ever disagreeing.
  *
  * ## Cache safety
  *
@@ -419,14 +422,15 @@ final class Frontend {
 			$conditions = self::object_meta( $popup->ID, Meta::CONDITIONS, Meta::default_conditions() );
 
 			/*
-			 * Stage 2. No evaluator is supplied because none exists until Phase 4
-			 * registers the built-in server conditions, so every rule is
-			 * indeterminate and every group survives. That is the documented
-			 * behaviour and not a shortcut: Rule_Evaluator deliberately has no
-			 * fallback of its own, because treating an unjudged rule as satisfied
-			 * would pass targeting nothing had checked.
+			 * Stage 2. The evaluator is the same one {@see Frontend::popup_config()}
+			 * strips with, and it has to be: Rule_Evaluator decides survival and
+			 * emission through one method, so handing the two calls different
+			 * evaluators would let a group fail here and be emitted there, or the
+			 * reverse. Rule_Evaluator still supplies no fallback of its own —
+			 * treating an unjudged rule as satisfied would pass targeting nothing
+			 * had checked — so a rule this evaluator declines stays indeterminate.
 			 */
-			if ( ! Rule_Evaluator::rule_set_passes_server( $conditions ) ) {
+			if ( ! Rule_Evaluator::rule_set_passes_server( $conditions, self::evaluate_server_rule( ... ) ) ) {
 				continue;
 			}
 
@@ -601,6 +605,58 @@ final class Frontend {
 	}
 
 	/**
+	 * Decides one `Context::Server` rule, or declines to.
+	 *
+	 * Pipeline stage 2's actual judgement, and the evaluator
+	 * {@see Rule_Evaluator} was built to accept. That parameter shipped with no
+	 * fallback behaviour of its own so that a condition nobody had implemented
+	 * could not silently pass; this method is what supplies the real thing, and
+	 * {@see Frontend::matched_popups()} and {@see Frontend::popup_config()} pass
+	 * this same one so survival and emission are decided identically.
+	 *
+	 * Each built-in registration answers for the keys it registered and returns
+	 * null for every other key, which is why the chain below is `??` and the first
+	 * real verdict wins. No key can be claimed twice — the registry raises on a
+	 * duplicate — so only the class that registered a key ever returns a verdict
+	 * for it, and the order of the chain cannot change an answer.
+	 *
+	 * The {@see Condition} is passed through rather than looked up again, and
+	 * dispatch happens on `$condition->key` rather than on the rule's stored
+	 * `type`. {@see Rule_Evaluator} has already resolved that type against the
+	 * registry and already confirmed the condition declares `Context::Server`, so
+	 * a rule cannot be judged by a condition it does not name.
+	 *
+	 * **Null is not false.** A rule this chain cannot read — unusable values, or a
+	 * server-context condition registered by an extension popkit knows nothing
+	 * about — is indeterminate. Its group survives, the rule is emitted, and the
+	 * client denies it without applying `negate`. Answering false instead would
+	 * hand `negate` a boolean to invert, and an unreadable "members of this
+	 * section only" rule would become "everybody" — the failure
+	 * `docs/data-model.md` names as the worst this plugin can have.
+	 *
+	 * ## Cache safety
+	 *
+	 * Everything reachable from here is a function of the URL, of the query
+	 * WordPress resolved from it, and of stored content. {@see Context} is what
+	 * makes that structural rather than a habit: a condition needing a cookie, a
+	 * request header or the clock cannot honestly declare `Context::Server`, and
+	 * {@see Rule_Evaluator} never calls this method for one that declares
+	 * `Context::Client`. Nothing here reads the current user, and nothing here is
+	 * printed — a rule is reduced to a boolean and the boolean is all that reaches
+	 * the response.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array     $rule      Stored rule whose type names $condition.
+	 * @param Condition $condition Registered condition, guaranteed server-context.
+	 * @return bool|null True or false once the rule is decided, null when it is not.
+	 */
+	private static function evaluate_server_rule( array $rule, Condition $condition ): ?bool {
+		return Conditions\Content_Conditions::evaluate( $rule, $condition )
+			?? Conditions\Url_Conditions::evaluate( $rule, $condition );
+	}
+
+	/**
 	 * Builds one popup's entry in the emitted config.
 	 *
 	 * `conditions` is passed through {@see Rule_Evaluator::strip_server_rules()}
@@ -609,6 +665,13 @@ final class Frontend {
 	 * because they have already been decided and shipping them would leak the
 	 * site's targeting configuration into the page source. What is left is exactly
 	 * what the browser still has to judge.
+	 *
+	 * It is handed {@see Frontend::evaluate_server_rule()}, the same evaluator
+	 * {@see Frontend::matched_popups()} used to decide that this popup survived at
+	 * all. Passing it here is not optional: without it every server rule would
+	 * read as indeterminate and be emitted to a client that has no evaluator for a
+	 * server-context type, which would fail the rule closed and suppress a popup
+	 * the server had already said should show.
 	 *
 	 * Nothing is escaped here. This is data on its way to `wp_json_encode()`, and
 	 * escaping belongs at output.
@@ -624,7 +687,7 @@ final class Frontend {
 		return array(
 			'id'         => (int) $popup->ID,
 			'slug'       => (string) $popup->post_name,
-			'conditions' => Rule_Evaluator::strip_server_rules( $conditions ),
+			'conditions' => Rule_Evaluator::strip_server_rules( $conditions, self::evaluate_server_rule( ... ) ),
 			'triggers'   => self::trigger_list( $popup->ID ),
 			'schedule'   => self::object_meta( $popup->ID, Meta::SCHEDULE, Meta::default_schedule() ),
 			'frequency'  => self::object_meta( $popup->ID, Meta::FREQUENCY, Meta::default_frequency() ),
@@ -637,15 +700,29 @@ final class Frontend {
 	 *
 	 * Pipeline stage 4. Two things, and only two things, require it: an enabled
 	 * schedule needs authoritative time, and a `user_state` rule needs login
-	 * state. A page with no popups, or with only device, referrer, UTM or
-	 * visit-history targeting, costs zero extra round trips — see
-	 * `docs/CLAUDE.md` -> Other rules governing it.
+	 * state. `device`, `referrer`, `utm` and `visit_history` are the other four
+	 * client conditions and every one of them is answerable from the browser
+	 * alone, so a page carrying only those — or carrying no popup at all — costs
+	 * zero extra round trips. See `docs/CLAUDE.md` -> Other rules governing it,
+	 * and the "Needs context" column of `docs/data-model.md` -> Built-in
+	 * conditions, which this method is the implementation of.
+	 *
+	 * Because the test is a single literal match on the rule's `type`, adding a
+	 * client condition cannot accidentally opt a page into the fetch: a new type
+	 * is simply not `user_state`. The cost of getting this wrong runs both ways,
+	 * which is why it is spelled out rather than inferred — a false positive
+	 * spends a round trip on every page of the site for an answer nothing reads,
+	 * and a false negative leaves the client with no login state, so every
+	 * `user_state` rule fails closed and its popup never shows.
 	 *
 	 * The rules are read from the *emitted* config rather than from storage, which
 	 * is the correct source and not merely a convenient one. A `user_state` rule
 	 * inside a group that already failed server-side is not emitted, the client
 	 * will never evaluate it, and fetching context on its account would be a round
-	 * trip nobody uses.
+	 * trip nobody uses. That case is genuinely reachable now that
+	 * {@see Frontend::evaluate_server_rule()} resolves server rules: a group
+	 * pairing `post_type` with `user_state` disappears entirely on a page the post
+	 * type rule excludes, and this method must not see it.
 	 *
 	 * `enabled` is read loosely, and the looseness leans the way it does on
 	 * purpose. Answering "yes" when the schedule is in fact off costs one request
