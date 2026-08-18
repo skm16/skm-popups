@@ -21,6 +21,32 @@
  * Usage:
  *   npm run plugin-check
  *   npm run plugin-check -- --checks=i18n_usage
+ *
+ * ## When wp-env cannot start
+ *
+ * On this machine it cannot: the image build runs an unauthenticated
+ * `composer global require` and gets HTTP 429 from codeload.github.com, which is
+ * `tests/e2e/README.md`'s long-standing note. Plugin Check still has to be run,
+ * so it is run against the isolated end-to-end WordPress instead:
+ *
+ *   php wp-cli.phar --path=<e2e docroot> plugin install plugin-check --activate
+ *   php wp-cli.phar --path=<e2e docroot> plugin check popkit --format=csv
+ *
+ * with `WP_CONFIG_PATH` pointed at `e2e-site/wp-config-e2e.php`, because WP-CLI
+ * refuses the generated `wp-config.php` shim — it looks for a direct
+ * `wp-settings.php` require and the shim only carries a pointer.
+ *
+ * ## Check the archive, not the working tree
+ *
+ * This matters more than the transport. Run against the checkout, Plugin Check
+ * reported 38 errors and 28 warnings, and **every one** was a development file:
+ * `tests/`, `.github`, `.gitignore`, `phpunit.xml.dist`, a stray Playwright
+ * trace. None of it ships. Run against `build/popkit` — what `npm run build:zip`
+ * assembles and what a user actually installs — the same plugin reports zero and
+ * zero.
+ *
+ * So the meaningful invocation points at the staged build. Checking the working
+ * tree measures the repository, which is not the thing being submitted.
  */
 
 import { spawnSync } from 'node:child_process';

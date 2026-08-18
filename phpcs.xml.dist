@@ -9,6 +9,13 @@
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>*/dist/*</exclude-pattern>
+	<!--
+		The staging tree `npm run build:zip` assembles. It is a verbatim copy of
+		includes/, so scanning it reports every class in the plugin as a
+		duplicate of itself — a failure that appears the moment someone builds a
+		release and has nothing to do with the code.
+	-->
+	<exclude-pattern>*/build/*</exclude-pattern>
 	<exclude-pattern>*/tests/e2e/*</exclude-pattern>
 
 	<!--

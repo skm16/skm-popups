@@ -127,10 +127,32 @@ final class Test_Popkit_Plugin_Boot extends WP_UnitTestCase {
 			$after_first,
 			'The first boot() registered nothing at all. Everything below tests a guard that has nothing to guard.'
 		);
+
+		/*
+		 * The meta sanitizer rather than `init`.
+		 *
+		 * This assertion used to name `init`, on the grounds that the text domain
+		 * loader hung off it. That loader is gone — WordPress loads a hosted
+		 * plugin's translations by itself, and Plugin Check reports the call — and
+		 * with it went the only thing `boot()` attached to `init` directly.
+		 *
+		 * Most of what boot() registers cannot be counted twice: they are array
+		 * callables, and WordPress deduplicates those, so a second boot against an
+		 * already-booted site adds nothing to them however many times it runs.
+		 * `wp_footer` was tried here first and failed for exactly that reason.
+		 *
+		 * `register_post_meta()` installs a closure per key, and a closure has a
+		 * fresh identity every time, so this hook does count up. That makes it the
+		 * honest choice for "the first boot did something observable" — and it is
+		 * a meaningful thing to have observed, since without it the targeting rule
+		 * set is stored unsanitized.
+		 */
+		$sanitizer = 'sanitize_post_meta__popkit_conditions_for_popkit_popup';
+
 		$this->assertGreaterThan(
-			isset( $before['init'] ) ? $before['init'] : 0,
-			isset( $after_first['init'] ) ? $after_first['init'] : 0,
-			'boot() must add a callback to init. The text domain, and everything later phases attach, hangs off that hook.'
+			isset( $before[ $sanitizer ] ) ? $before[ $sanitizer ] : 0,
+			isset( $after_first[ $sanitizer ] ) ? $after_first[ $sanitizer ] : 0,
+			'boot() must register the targeting rule set\'s meta sanitizer. Without it the rule set is stored exactly as posted.'
 		);
 
 		$plugin->boot();
@@ -144,17 +166,29 @@ final class Test_Popkit_Plugin_Boot extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Booting attaches a loader for popkit's own translations.
+	 * Booting registers no text domain loader, and does not need to.
 	 *
-	 * Asserted behaviourally: the callbacks boot() added to `init` are invoked
-	 * against a recording registry, and the recording has to show popkit's text
-	 * domain being pointed at popkit's languages directory. A callback that
-	 * loaded the wrong domain, or read from the wrong directory, satisfies
-	 * `has_action()` and fails here.
+	 * This assertion is the inverse of the one it replaces, and the reversal is
+	 * deliberate rather than a retreat. WordPress has loaded translations for
+	 * `.org`-hosted plugins by itself since 4.6 — the first `__()` call against a
+	 * domain triggers a just-in-time load from
+	 * `WP_LANG_DIR/plugins/{domain}-{locale}.mo` — so `load_plugin_textdomain()`
+	 * loads the same catalogue a second time. Plugin Check, which a submission
+	 * has to pass, reports the call, and it was the only finding standing between
+	 * this plugin and a clean report.
+	 *
+	 * The assertion is kept rather than deleted because the *absence* is now the
+	 * contract. Someone reinstating the call to "fix translations" would
+	 * reintroduce the finding, and a deleted test would let that through
+	 * silently.
+	 *
+	 * Editor strings are not covered by any of this: script translations have no
+	 * just-in-time equivalent and are still declared explicitly by
+	 * `Editor::enqueue_assets()`.
 	 *
 	 * @return void
 	 */
-	public function test_boot_registers_a_loader_for_the_popkit_text_domain() {
+	public function test_boot_relies_on_core_to_load_translations() {
 		$plugin = $this->unbooted_plugin();
 
 		$before = $this->hook_callbacks( 'init' );
@@ -163,25 +197,12 @@ final class Test_Popkit_Plugin_Boot extends WP_UnitTestCase {
 
 		$added = array_diff_key( $this->hook_callbacks( 'init' ), $before );
 
-		$this->assertNotSame( array(), $added, 'boot() registered nothing on init, so the text domain is never loaded.' );
-
-		$this->assertContains(
-			0,
-			$this->priorities_of( $added ),
-			'The text domain must load on init at priority 0. Anything the plugin hooks to init at a normal priority — and anything another plugin hooks — may translate a string, and a string translated before the domain is available is silently returned untranslated.'
-		);
-
 		$recorded = $this->record_textdomain_registrations( $added );
 
-		$this->assertArrayHasKey(
-			'popkit',
+		$this->assertSame(
+			array(),
 			$recorded,
-			'Nothing registered the "popkit" text domain. Every translated string in the plugin uses that domain, so a missing or misspelled domain here means the plugin can never be translated at all — and nothing warns about it, because untranslated strings look exactly like translated ones in English.'
-		);
-		$this->assertStringEndsWith(
-			'/languages',
-			wp_normalize_path( (string) $recorded['popkit'] ),
-			'The text domain must be loaded from the plugin\'s own languages directory, matching the Domain Path header.'
+			'Something boot() hooked to init called load_plugin_textdomain(). WordPress loads a hosted plugin\'s translations on its own, and Plugin Check reports the call — it is the difference between a clean submission report and a warning.'
 		);
 	}
 
@@ -370,22 +391,6 @@ final class Test_Popkit_Plugin_Boot extends WP_UnitTestCase {
 		return $callbacks;
 	}
 
-	/**
-	 * Extracts the priorities from a hook_callbacks() result.
-	 *
-	 * @param array<string, callable> $callbacks Keyed "priority|id".
-	 * @return int[]
-	 */
-	private function priorities_of( array $callbacks ) {
-		$priorities = array();
-
-		foreach ( array_keys( $callbacks ) as $key ) {
-			$parts        = explode( '|', (string) $key, 2 );
-			$priorities[] = (int) $parts[0];
-		}
-
-		return $priorities;
-	}
 
 	/**
 	 * Puts the request into the admin.

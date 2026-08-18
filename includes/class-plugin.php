@@ -103,14 +103,29 @@ final class Plugin {
 		$this->booted = true;
 
 		/*
-		 * Priority 0 on `init` rather than an immediate call: loading translations
-		 * before `init` fires triggers a _doing_it_wrong() notice in modern
-		 * WordPress, and Phase 0 must activate clean under WP_DEBUG.
+		 * There is deliberately no load_plugin_textdomain() call.
 		 *
-		 * First-class callable syntax lets a private method be hooked without
-		 * widening the class's public surface.
+		 * WordPress has loaded translations for `.org`-hosted plugins by itself
+		 * since 4.6: the first call to `__()` with a domain triggers a
+		 * just-in-time load from `WP_LANG_DIR/plugins/{domain}-{locale}.mo`,
+		 * which is where language packs land. Calling the function as well loads
+		 * the same catalogue a second time, and Plugin Check — the gate this
+		 * plugin has to pass to be listed — reports it.
+		 *
+		 * What is given up is bundled translations: a `.mo` shipped inside the
+		 * plugin's own `languages/` directory is *not* found by the just-in-time
+		 * loader. That is the right trade here. popkit ships a `.pot` for
+		 * translators and takes its translations from the repository, which is
+		 * how a hosted plugin is meant to work — and a bundled catalogue would
+		 * go stale against the one translate.wordpress.org serves.
+		 *
+		 * The `Domain Path` header stays. It is what tells
+		 * translate.wordpress.org where the `.pot` lives.
+		 *
+		 * Editor strings are separate and still declared explicitly, through
+		 * `wp_set_script_translations()` in {@see Editor::enqueue_assets()};
+		 * script translations have no just-in-time equivalent.
 		 */
-		add_action( 'init', $this->load_textdomain( ... ), 0 );
 
 		/*
 		 * Settings registration. Settings::init() decides for itself whether to
@@ -155,16 +170,6 @@ final class Plugin {
 		$this->boot_admin();
 	}
 
-	/**
-	 * Loads the plugin text domain.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return void
-	 */
-	private function load_textdomain(): void {
-		load_plugin_textdomain( 'popkit', false, dirname( POPKIT_BASENAME ) . '/languages' );
-	}
 
 	/**
 	 * Extension point: condition and trigger registries.

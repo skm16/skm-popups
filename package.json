@@ -29,7 +29,8 @@
 		"size": "size-limit",
 		"plugin-check": "node tools/plugin-check.mjs",
 		"env:start": "wp-env start",
-		"env:stop": "wp-env stop"
+		"env:stop": "wp-env stop",
+		"build:zip": "node tools/build-zip.mjs"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.62.1",
