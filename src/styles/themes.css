@@ -1,0 +1,159 @@
+/**
+ * popkit — the shipped themes.
+ *
+ * A theme is a set of `--popkit-` token values and nothing else. There is no
+ * layout here, no selector that targets a part of the popup, and no rule that
+ * only applies to one layout. That is the constraint that makes the exit
+ * criterion checkable at all: if a theme could restyle the close button
+ * directly, "the close button meets contrast in every theme and both layouts"
+ * would be eight separate claims rather than one.
+ *
+ * `frontend.css` owns the structure and consumes these tokens. The theme class
+ * sits on the popup root and the tokens are inherited down to the container, so
+ * a theme never needs to know which element paints the surface.
+ *
+ * ## Every colour pair here was measured, not chosen
+ *
+ * The ratios below were computed with `tools/contrast.cjs` before the values
+ * were written down, and `tests/e2e/themes.spec.js` re-measures them against
+ * what a browser actually renders. Two different things: the numbers in these
+ * comments are what the palette promises, and the spec is what the cascade
+ * delivers.
+ *
+ * | Theme | Pair | Ratio | Needs |
+ * |---|---|---|---|
+ * | light | `#1e1e1e` on `#ffffff` | 16.67:1 | 4.5 |
+ * | light | muted `#595959` on `#ffffff` | 7:1 | 4.5 |
+ * | light | border `#767676` on `#ffffff` | 4.54:1 | 3 |
+ * | light | focus `#0b57d0` on `#ffffff` | 6.39:1 | 3 |
+ * | dark | `#f0f0f0` on `#1e1e1e` | 14.63:1 | 4.5 |
+ * | dark | muted `#b8b8b8` on `#1e1e1e` | 8.4:1 | 4.5 |
+ * | dark | border `#8c8c8c` on `#1e1e1e` | 4.96:1 | 3 |
+ * | dark | focus `#8ab4f8` on `#1e1e1e` | 7.91:1 | 3 |
+ * | bordered | `#1e1e1e` on `#ffffff` | 16.67:1 | 4.5 |
+ *
+ * ## Why the three shipped themes are opaque
+ *
+ * `--popkit-surface` is a solid colour in every shipped theme, and the contrast
+ * helper refuses a translucent background outright. A popup whose panel is
+ * semi-transparent has a text contrast ratio that depends on the article behind
+ * it — it passes over a white paragraph and fails over a photograph, on the same
+ * page, in the same session. There is no honest way to test that, which is the
+ * same reason there is no honest way to ship it.
+ *
+ * Inherit is the exception and is discussed below.
+ *
+ * @see docs/data-model.md -> Display
+ * @see tools/contrast.cjs
+ */
+
+/*
+ * Light.
+ *
+ * Also the shape every other theme follows: a surface, a text colour, a muted
+ * text colour, a border, a focus ring, and the overlay. Nothing else is
+ * themeable, and that is deliberate — see the file docblock.
+ */
+.popkit-popup--theme-light {
+	--popkit-surface: #fff;
+	--popkit-on-surface: #1e1e1e;
+	--popkit-muted: #595959;
+	--popkit-border: #767676;
+	--popkit-border-width: 1px;
+	--popkit-focus: #0b57d0;
+	--popkit-overlay: rgb(0 0 0 / 50%);
+}
+
+/*
+ * Dark.
+ *
+ * The overlay is heavier than light's. A 50% black scrim over a dark page is
+ * nearly invisible, and the overlay is what tells a visitor the page behind is
+ * inert — it is doing a job, not decorating.
+ */
+.popkit-popup--theme-dark {
+	--popkit-surface: #1e1e1e;
+	--popkit-on-surface: #f0f0f0;
+	--popkit-muted: #b8b8b8;
+	--popkit-border: #8c8c8c;
+	--popkit-border-width: 1px;
+	--popkit-focus: #8ab4f8;
+	--popkit-overlay: rgb(0 0 0 / 70%);
+}
+
+/*
+ * Bordered.
+ *
+ * Light's palette with a heavy, full-contrast border and no rounding. It exists
+ * for themes whose own surfaces are white: a white panel on a white page has no
+ * visible edge, and "where does the popup end" stops being obvious. The border
+ * is the same colour as the text rather than a grey, because at 2px it reads as
+ * a frame and a grey frame at that weight reads as a rendering artifact.
+ */
+.popkit-popup--theme-bordered {
+	--popkit-surface: #fff;
+	--popkit-on-surface: #1e1e1e;
+	--popkit-muted: #595959;
+	--popkit-border: #1e1e1e;
+	--popkit-border-width: 2px;
+	--popkit-radius: 0;
+	--popkit-focus: #0b57d0;
+	--popkit-overlay: rgb(0 0 0 / 50%);
+}
+
+/*
+ * Inherit.
+ *
+ * Consumes the active theme's `theme.json` presets. `--wp--preset--color--base`
+ * and `--wp--preset--color--contrast` are the pair every block theme since
+ * Twenty Twenty-Two declares and uses for exactly this — page background and
+ * body text — so a popup in inherit mode looks like part of the site rather than
+ * like a plugin's idea of the site.
+ *
+ * ## The fallbacks are the whole safety story
+ *
+ * Every `var()` here falls back to `Canvas` / `CanvasText`, the user agent's own
+ * pair. Those follow the platform light/dark preference and forced-colors mode,
+ * and cannot fail a contrast check against each other. So the failure modes are
+ * bounded: a classic theme with no `theme.json` gets the user agent's colours; a
+ * block theme gets its own.
+ *
+ * What this mode cannot promise is a *ratio*. A theme is free to declare a base
+ * and a contrast that fail WCAG against each other, and popkit has no way to
+ * correct that without overriding the choice the site owner made. So inherit is
+ * excluded from the contrast assertions in `themes.spec.js` — deliberately and
+ * with the reason recorded there, rather than by being quietly left out of the
+ * list. What *is* asserted is that inherit resolves to the theme's presets when
+ * they exist and to the user agent pair when they do not.
+ *
+ * `--popkit-border` derives from the text colour rather than reading a preset,
+ * because there is no preset that reliably means "a line you can see". Themes
+ * spell it `--wp--preset--color--tertiary`, `--secondary`, `--accent-4`, or not
+ * at all, and picking one would produce an invisible border on every theme that
+ * uses the name differently. `color-mix()` against the surface gives a line that
+ * is always visible and always related to the palette; browsers without it fall
+ * back to the full-contrast text colour, which is heavier than intended and
+ * never wrong.
+ */
+.popkit-popup--theme-inherit {
+	--popkit-surface: var(--wp--preset--color--base, Canvas);
+	--popkit-on-surface: var(--wp--preset--color--contrast, CanvasText);
+	--popkit-muted: var(--wp--preset--color--contrast, CanvasText);
+	--popkit-border: var(--wp--preset--color--contrast, CanvasText);
+	--popkit-border-width: 1px;
+	--popkit-focus: var(--wp--preset--color--contrast, CanvasText);
+	--popkit-overlay: rgb(0 0 0 / 50%);
+
+	font-family: var(--wp--preset--font-family--body, inherit);
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+
+	.popkit-popup--theme-inherit {
+		--popkit-border: color-mix(
+			in srgb,
+			var(--wp--preset--color--contrast, CanvasText) 45%,
+			var(--wp--preset--color--base, Canvas)
+		);
+	}
+}

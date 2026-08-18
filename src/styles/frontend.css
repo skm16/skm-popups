@@ -55,7 +55,17 @@
  * `<div role="region" hidden>` root carrying `data-popkit-layout`,
  * `data-popkit-position` and `data-popkit-animation`, wrapping a
  * `__container`, a `__close` button and a `__content`.
+ *
+ * ## Where the themes are
+ *
+ * `themes.css`, imported below and inlined by esbuild into the single
+ * `dist/frontend.css` the plugin enqueues. It contains token values and nothing
+ * else — no selector there targets a part of the popup, which is what keeps the
+ * accessibility guarantees in this file true for every theme rather than for
+ * each theme separately.
  */
+
+@import "./themes.css";
 
 :root {
 	--popkit-gutter: 1rem;
@@ -64,12 +74,24 @@
 	--popkit-radius: 4px;
 	--popkit-surface: Canvas;
 	--popkit-on-surface: CanvasText;
+	--popkit-muted: CanvasText;
+	--popkit-border: CanvasText;
+	--popkit-border-width: 0;
+	--popkit-focus: CanvasText;
+	--popkit-focus-width: 2px;
+	--popkit-focus-offset: 2px;
 	--popkit-overlay: rgb(0 0 0 / 50%);
 	--popkit-close-size: 44px;
 	--popkit-duration: 200ms;
 	--popkit-easing: ease-out;
 	--popkit-z-index: 999999;
 }
+
+/*
+ * The unthemed default draws no border — `--popkit-border-width` is 0 above, and
+ * every shipped theme sets it. A default border would be one more thing an
+ * author who wants a plain panel has to remove.
+ */
 
 /*
  * A banner is shipped `hidden` and revealed by the controller. Declared rather
@@ -208,6 +230,7 @@ dialog.popkit-popup--no-overlay::backdrop {
 	min-height: 0;
 	padding: var(--popkit-spacing);
 	padding-inline-end: max(var(--popkit-spacing), var(--popkit-close-size));
+	border: var(--popkit-border-width) solid var(--popkit-border);
 	border-radius: var(--popkit-radius);
 	background: var(--popkit-surface);
 	color: var(--popkit-on-surface);
@@ -256,6 +279,45 @@ dialog.popkit-popup--no-overlay::backdrop {
 }
 
 /*
+ * Reclaim the text colour from the active theme.
+ *
+ * A popup paints its own surface, and the theme has no idea what colour that is.
+ * Block themes set heading and link colours explicitly — Twenty Twenty-Four
+ * emits `:root :where(h1, h2, …) { color: var(--wp--preset--color--contrast) }`
+ * — and those rules win over the colour inherited from `__container`, because
+ * inheritance loses to any declaration at all.
+ *
+ * The result is not subtle and was found by looking at a screenshot rather than
+ * by a test: on the dark theme, a heading rendered `#111111` on `#1e1e1e`. That
+ * is **1.13:1**, against a 4.5:1 requirement — the popup's headline, effectively
+ * invisible, on every block theme. Body text was correct throughout, because
+ * nothing styles a `<p>`, which is exactly why the contrast tests passed.
+ *
+ * Two things are deliberately *not* overridden:
+ *
+ * - Anything the author coloured. Block colour support adds `.has-text-color`
+ *   for a preset and an inline `style` for a custom value, so `:not()` on that
+ *   class leaves both alone. An author who chose a colour meant it.
+ * - `.wp-element-button`, which is a link painted as a button with its own
+ *   background. Forcing `color: inherit` there produces a button whose label
+ *   matches the popup surface rather than the button.
+ *
+ * Links keep an underline as well as taking the colour. Once a link is the same
+ * colour as the text around it, colour cannot be what distinguishes it, and WCAG
+ * 1.4.1 asks for something other than colour anyway. Most themes already
+ * underline; declaring it here means the rule does not depend on that.
+ */
+.popkit-popup__content
+	:is(h1, h2, h3, h4, h5, h6):not(.has-text-color) {
+	color: inherit;
+}
+
+.popkit-popup__content a:not(.has-text-color, .wp-element-button) {
+	color: inherit;
+	text-decoration: underline;
+}
+
+/*
  * 44x44 minimum in every theme and both layouts, per docs/CLAUDE.md ->
  * Accessibility. `min-width` and `min-height` rather than fixed dimensions, so
  * a theme that gives the button a longer visible label grows it instead of
@@ -276,6 +338,23 @@ dialog.popkit-popup--no-overlay::backdrop {
 	background: none;
 	color: inherit;
 	cursor: pointer;
+}
+
+/*
+ * The focus ring is themed and never removed.
+ *
+ * `:focus-visible` rather than `:focus`, so a pointer click does not leave a
+ * ring behind, and `outline` rather than a border or a shadow, because an
+ * outline is the one thing forced-colors mode preserves — a `box-shadow` ring is
+ * simply not painted there, leaving a keyboard user with no focus indicator at
+ * all on exactly the setup most likely to need one.
+ *
+ * The offset is inside the button's own hit area, so the ring never overlaps the
+ * content beside it and never grows the 44x44 box.
+ */
+.popkit-popup__close:focus-visible {
+	outline: var(--popkit-focus-width) solid var(--popkit-focus);
+	outline-offset: calc(-1 * var(--popkit-focus-offset));
 }
 
 /*
