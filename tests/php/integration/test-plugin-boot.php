@@ -20,6 +20,7 @@
  */
 
 use Popkit\Activator;
+use Popkit\Editor;
 use Popkit\Plugin;
 
 /**
@@ -201,6 +202,38 @@ final class Test_Popkit_Plugin_Boot extends WP_UnitTestCase {
 		$this->assertNotFalse(
 			has_action( 'admin_init', array( Activator::class, 'maybe_upgrade' ) ),
 			'The self-heal routine is not hooked to admin_init. A site whose activation hook never fired — restored from a backup, or updated over FTP — would sit permanently without capabilities and with no error anywhere.'
+		);
+	}
+
+	/**
+	 * Booting attaches the block editor sidebar.
+	 *
+	 * This is the test for a failure that has already happened twice in this
+	 * project, in two different subsystems: a class that is complete, correct and
+	 * fully covered by its own tests, whose `init()` nothing ever calls. Every
+	 * test of `Popkit\Editor` passes against an editor screen that never loads it,
+	 * because those tests call `Editor::init()` themselves. Only a test driven
+	 * through `Plugin::boot()` can tell the difference.
+	 *
+	 * Both hooks are asserted rather than one. They are registered by the same
+	 * call and would normally appear together — but `render_missing_build_notice()`
+	 * is the thing that *reports* an absent bundle, so a regression that dropped
+	 * only the notice would remove the one signal an author gets when the sidebar
+	 * silently fails to load.
+	 *
+	 * @return void
+	 */
+	public function test_boot_attaches_the_block_editor_sidebar() {
+		$this->unbooted_plugin()->boot();
+
+		$this->assertNotFalse(
+			has_action( 'enqueue_block_editor_assets', array( Editor::class, 'enqueue_assets' ) ),
+			'The editor bundle is never enqueued, so the popup sidebar does not exist on any screen. Editor::init() is not reached from Plugin::boot(). Every other Editor test passes regardless, because they call Editor::init() themselves.'
+		);
+
+		$this->assertNotFalse(
+			has_action( 'admin_notices', array( Editor::class, 'render_missing_build_notice' ) ),
+			'The missing-build notice is not hooked, so a checkout where npm run build never ran shows an editor screen with no popkit panels and no explanation.'
 		);
 	}
 

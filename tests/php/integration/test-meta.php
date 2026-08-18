@@ -565,4 +565,66 @@ final class Test_Popkit_Meta extends WP_UnitTestCase {
 			)
 		);
 	}
+
+	/**
+	 * A popup that has stored nothing still serves complete defaults over REST.
+	 *
+	 * The editor depends on this and holds no defaults of its own. `useMeta()` in
+	 * `src/editor/use-meta.js` returns whatever the entity record carries, so a
+	 * key that arrived absent or half-populated would render panels with empty
+	 * selects — and the first save would write whatever those empty controls
+	 * produced over a configuration the author never opened.
+	 *
+	 * An earlier revision of the editor carried its own copy of these values and
+	 * had `on_convert` wrong. Nothing failed, because both sides were internally
+	 * consistent and only disagreed with each other. Removing the copy fixed that
+	 * and made this test the thing holding the contract up.
+	 *
+	 * Asserted through `rest_do_request()` rather than `get_post_meta()`, because
+	 * the REST response is what the editor actually receives: a key registered
+	 * with a default but without `show_in_rest` would pass the direct read and
+	 * arrive empty in the browser.
+	 *
+	 * @return void
+	 */
+	public function test_a_fresh_popup_serves_every_meta_default_over_rest() {
+		$administrator = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $administrator );
+
+		$popup = $this->create_popup( $administrator );
+
+		$response = rest_do_request( new WP_REST_Request( 'GET', '/wp/v2/' . Post_Type::POST_TYPE . '/' . $popup ) );
+
+		$this->assertSame( 200, $response->get_status(), 'The popup could not be read over REST at all.' );
+
+		$meta = $response->get_data()['meta'] ?? array();
+
+		$expected = array(
+			Meta::CONDITIONS => Meta::default_conditions(),
+			Meta::TRIGGERS   => Meta::default_triggers(),
+			Meta::SCHEDULE   => Meta::default_schedule(),
+			Meta::FREQUENCY  => Meta::default_frequency(),
+			Meta::DISPLAY    => Meta::default_display(),
+		);
+
+		foreach ( $expected as $key => $default ) {
+			$this->assertArrayHasKey(
+				$key,
+				$meta,
+				sprintf(
+					'"%s" is absent from the REST response for a popup that has stored nothing. The editor reads its starting values from this response and has no fallback, so its panel for this key would render empty and then save that emptiness.',
+					$key
+				)
+			);
+
+			$this->assertSame(
+				$default,
+				$meta[ $key ],
+				sprintf(
+					'"%s" does not arrive over REST as the value Meta declares as its default. The editor renders exactly what this response carries, so any difference here is a difference between what an author is shown and what the server holds.',
+					$key
+				)
+			);
+		}
+	}
 }

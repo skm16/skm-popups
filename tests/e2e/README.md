@@ -259,6 +259,42 @@ For the same reason `wp-config-e2e.php` sets `DISABLE_WP_CRON` and disables
 update checks. A request that fires a loopback request at this server waits for a
 server that is busy waiting for it.
 
+### The admin is unreachable in Chromium here
+
+`tests/e2e/editor.spec.js` fails in full on this machine with
+`page.goto: Page crashed`, and the cause is not the plugin, the editor, or the
+tracing setting below. A bare script — `chromium.launch()`, one context, one
+navigation — crashes the renderer on **`/wp-admin/` itself**, with no plugin
+involvement at all:
+
+```
+CRASH core post editor (new post)
+CRASH popkit popup editor
+CRASH plain admin dashboard
+```
+
+Ruled out, each by reproducing the crash with it changed: `trace: 'off'`,
+`--disable-dev-shm-usage`, `--disable-gpu`, and a fresh context per navigation.
+Firefox loads the same URLs on the same instance without complaint.
+
+**The fix in place:** a third project, `admin`, runs Firefox and owns
+`editor.spec.js`; `chromium` and `mobile` ignore that file. All eight editor
+specs pass there. This is not a cross-browser matrix — it is one engine that can
+reach the admin and one that cannot.
+
+```bash
+npx playwright test --project=admin      # the editor sidebar, in Firefox
+npx playwright test --project=chromium   # everything else
+```
+
+The `admin` project pins a 1440px viewport, which is load bearing: below roughly
+960px the document settings sidebar becomes a modal and the panels mount
+somewhere else, so the docked-region selectors stop matching.
+
+Do not "fix" a failure here by deleting the spec or loosening its assertions.
+Re-test Chromium after a Playwright bump; if it recovers, fold the file back into
+`chromium` and drop the project.
+
 ### Traces are recorded without DOM snapshots
 
 `trace: 'retain-on-failure'` crashes the Chromium renderer on this machine.
@@ -479,44 +515,49 @@ so `/` and `/popkit-e2e-clean/` carry no popup and none of popkit's markup.
 Treat them as a sanity check on the order of magnitude, not as a fixture: any
 change to the popup's content or the front-end bundle moves them.
 
-## Known: the form-login test crashes Chromium on Windows
+## Resolved: the form-login test, and Chromium's admin crash
 
 `conditions.spec.js` → *"user_state opens for the state the visitor is in, on
-both sides of a login"* fails locally on Windows with:
+both sides of a login"* used to fail locally on Windows with
+`locator.fill: Target crashed`, and this file recorded it as a permanent
+limitation. It now passes. So does the whole Phase 5 editor suite, which hits the
+same wall harder.
 
-```
-Error: locator.fill: Target crashed
-  - waiting for locator('#user_login')
-```
+**The earlier diagnosis here was wrong and is worth correcting.** It attributed
+the crash to `php -S` being single threaded on Windows — Chromium holding
+connections open against a server that answers one request at a time. That story
+is plausible and it is not what is happening: Firefox drives the same login form,
+against the same single-threaded server, on the same machine, without trouble.
+The concurrency of the server is not the variable. The browser is.
 
-**This is a harness limitation, not a plugin defect, and not a test defect.**
-It reproduces in a bare Playwright script with no test code, no init scripts and
-no fixtures — navigate to `wp-login.php`, call `.fill()`, and the renderer
-process dies. popkit is not involved: it emits nothing on the login screen
-(`popkit-config`, asset tags and popup roots are all absent from that response,
-which is correct and is worth keeping that way).
+What is actually true, established by reproducing it in a bare script with no
+test code, no fixtures and no plugin:
 
-The cause is the server, not the browser. `php -S` on Windows is single
-threaded — `PHP_CLI_SERVER_WORKERS` forks and so does not exist there, as
-`serve.mjs` documents. `wp-login.php` pulls several same-origin subresources,
-and Chromium holds connections open while the server can only answer one at a
-time.
+| Target | Chromium | Firefox |
+|---|---|---|
+| `wp-login.php`, then `.fill()` | crashes | fine |
+| `/wp-admin/` dashboard | crashes | fine |
+| `post-new.php` (core post editor) | crashes | fine |
+| any front-end page | fine | fine |
 
-The test is written the way it is on purpose: it logs in through the **real
-form** rather than injecting a cookie, because the failure `CLAUDE.md`
-describes — `rest_cookie_check_errors()` making the context route report
-`logged_out` for everybody — is invisible to a fabricated session. Do not
-"fix" it by swapping in a cookie; that would delete the only test that proves
-the plugin's most important security behaviour.
+Chromium cannot reach wp-admin on this machine at all, popkit or no popkit. Since
+that is a browser problem rather than a server one, the fix is to use the other
+browser for the tests that need an admin screen. The `admin` project does exactly
+that, and takes two kinds of work:
 
-What to do:
+- `editor.spec.js` in full, by `testMatch`
+- individual tests elsewhere tagged **`@firefox`**, currently just the login one
 
-- **On Linux CI it does not occur** — workers fork, so the server is concurrent.
-  The GitHub Actions job is the authority for this test.
-- Locally, treat 1 failure out of 104 in this specific test as expected. Every
-  other login-adjacent assertion still runs: `routeState()` reads the context
-  route directly over `page.request` and is unaffected.
-- If it needs to pass on Windows, put a concurrent server in front of the
-  WordPress tree (nginx, Caddy, or `php-cgi` behind a reverse proxy) and point
-  `WP_BASE_URL` at it. Do not add retries — a renderer crash is not flake and
-  retrying it hides the next real one.
+`chromium` and `mobile` carry `grepInvert: /@firefox/`, so a tagged test runs in
+exactly one place. Tag a test when it drives an admin screen; leave it untagged
+otherwise, because front-end coverage is more valuable in Chromium.
+
+The login test still logs in through the **real form** rather than injecting a
+cookie, and that has not changed. The failure `CLAUDE.md` describes —
+`rest_cookie_check_errors()` making the context route report `logged_out` for
+everybody — is invisible to a fabricated session. Do not "fix" anything here by
+swapping in a cookie; that would delete the only test proving the plugin's most
+important security behaviour.
+
+Do not add retries either. A renderer crash is not flake, and retrying it hides
+the next real one.

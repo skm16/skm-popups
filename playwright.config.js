@@ -156,6 +156,11 @@ module.exports = defineConfig( {
 	projects: [
 		{
 			name: 'chromium',
+			// Excluded rather than skipped: these do not fail an assertion here,
+			// they crash the renderer during navigation, which reports as an
+			// error with no useful message. See the `admin` project below.
+			testIgnore: '**/editor.spec.js',
+			grepInvert: /@firefox/,
 			use: {
 				...devices[ 'Desktop Chrome' ],
 				viewport: { width: 1280, height: 800 },
@@ -164,8 +169,39 @@ module.exports = defineConfig( {
 		{
 			// Touch, small-viewport, and 44x44 hit-area assertions.
 			name: 'mobile',
+			testIgnore: '**/editor.spec.js',
+			grepInvert: /@firefox/,
 			use: {
 				...MOBILE_DEVICE,
+			},
+		},
+		{
+			/*
+			 * Everything that needs a working wp-admin, in Firefox.
+			 *
+			 * Not a cross-browser matrix — it is the only engine that reaches the
+			 * admin on the development machine. Chromium crashes its renderer
+			 * navigating to `/wp-admin/` at all, plugin or no plugin, and the
+			 * crash survives `trace: 'off'`, `--disable-dev-shm-usage` and
+			 * `--disable-gpu`.
+			 *
+			 * Two things run here. `editor.spec.js` is the whole Phase 5 sidebar,
+			 * which has no other home. The `@firefox` tag picks up individual
+			 * tests elsewhere that drive an admin screen — currently the
+			 * `user_state` login test in `conditions.spec.js`, which
+			 * tests/e2e/README.md recorded as a permanent local failure until
+			 * this project existed.
+			 *
+			 * The wide viewport is required, not cosmetic: below roughly 960px
+			 * the document settings sidebar becomes a modal and the panels mount
+			 * somewhere else.
+			 */
+			name: 'admin',
+			testMatch: [ '**/editor.spec.js', '**/conditions.spec.js' ],
+			grep: /@firefox|popup editor sidebar/,
+			use: {
+				...devices[ 'Desktop Firefox' ],
+				viewport: { width: 1440, height: 1000 },
 			},
 		},
 	],

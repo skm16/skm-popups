@@ -94,6 +94,29 @@ const FRONTEND_RESTRICTED_GLOBALS = [
 	},
 ];
 
+/**
+ * The `definedTypes` list `@wordpress/eslint-plugin` already declares.
+ *
+ * Read out of the shareable config rather than copied, because it is roughly a
+ * thousand entries long, it changes between releases, and a stale copy would
+ * fail in the direction that looks like a code problem: a type the config knows
+ * about being reported as undefined in a file nobody touched.
+ *
+ * Two configs in the array name this rule — one sets the bare severity `'warn'`,
+ * the other supplies the options — so the search is for a value carrying
+ * `definedTypes` rather than for the first mention. Taking the first mention
+ * yields the string, `[1]` is `undefined`, and the list silently comes back
+ * empty, which is the same breakage as hardcoding it wrong.
+ *
+ * Falls back to an empty list if the shape ever changes, which degrades to the
+ * rule's own defaults instead of throwing while ESLint loads its config.
+ */
+const INHERITED_JSDOC_TYPES =
+	wordpress.configs.recommended
+		.map( ( config ) => config?.rules?.[ 'jsdoc/no-undefined-types' ] )
+		.filter( ( rule ) => Array.isArray( rule ) && rule[ 1 ]?.definedTypes )
+		.pop()?.[ 1 ]?.definedTypes ?? [];
+
 module.exports = [
 	// Global ignores. Build output, vendored code, and test artifacts are not
 	// authored source and must never be linted.
@@ -127,6 +150,47 @@ module.exports = [
 				{
 					allowedTextDomain: [ 'popkit' ],
 				},
+			],
+
+			/*
+			 * JSX pragmas are real Babel directives, not documentation, but they
+			 * are written as docblock tags and `jsdoc/check-tag-names` rejects
+			 * every tag it does not recognise. Declaring them here is what lets
+			 * an editor file opt into `@wordpress/element`'s JSX runtime without
+			 * three lint errors at the top of the file — and without anyone
+			 * reaching for an inline disable comment, which is the workaround
+			 * that spreads.
+			 */
+			'jsdoc/check-tag-names': [
+				'error',
+				{
+					definedTags: [
+						'jsx',
+						'jsxFrag',
+						'jsxRuntime',
+						'jsxImportSource',
+					],
+				},
+			],
+
+			/*
+			 * `JSX.Element` is the return type of every component in the editor
+			 * bundle and is the type React's own ecosystem uses, but the
+			 * namespace comes from TypeScript's global scope and this project
+			 * ships no TypeScript for the rule to find it in.
+			 *
+			 * The existing list is spread rather than replaced, which is the
+			 * whole point of computing it above. `definedTypes` is not merged by
+			 * ESLint — the last config to name the rule supplies its options
+			 * outright — so writing `{ definedTypes: [ 'JSX' ] }` here would
+			 * silently drop every browser global, TypeScript utility type and
+			 * WordPress internal type the shareable config declares, and turn
+			 * `{Element}` and `{PageTransitionEvent}` in the *frontend* bundle
+			 * into errors. It did exactly that once.
+			 */
+			'jsdoc/no-undefined-types': [
+				'error',
+				{ definedTypes: [ ...INHERITED_JSDOC_TYPES, 'JSX' ] },
 			],
 		},
 	},

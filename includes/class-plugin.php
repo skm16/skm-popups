@@ -326,13 +326,18 @@ final class Plugin {
 	/**
 	 * Extension point: admin and block editor.
 	 *
-	 * Phase 5 attaches the editor sidebar assets and the schema-driven controls.
+	 * {@see Editor::init()} attaches two hooks and returns. It is called
+	 * unconditionally rather than behind an `is_admin()` test, because both hooks
+	 * it registers — `enqueue_block_editor_assets` and `admin_notices` — only fire
+	 * in the admin anyway, and each callback re-checks the screen for itself. An
+	 * `is_admin()` guard here would add a second place the answer is decided
+	 * without removing the first.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return void
 	 */
 	private function boot_admin(): void {
-		/* Intentionally empty until Phase 5. */
+		Editor::init();
 	}
 }

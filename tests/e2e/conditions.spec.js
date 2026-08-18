@@ -1244,7 +1244,10 @@ test.describe( 'popkit client conditions', () => {
 		}
 	} );
 
-	test( 'user_state opens for the state the visitor is in, on both sides of a login', async ( {
+	// @firefox — this test drives wp-login.php, and `.fill()` on that form kills
+	// the Chromium renderer on Windows. See tests/e2e/README.md. The tag routes
+	// it to the Firefox project, where it passes; chromium and mobile skip it.
+	test( 'user_state opens for the state the visitor is in, on both sides of a login @firefox', async ( {
 		page,
 		requestUtils,
 	} ) => {
