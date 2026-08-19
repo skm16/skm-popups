@@ -1,0 +1,80 @@
+/**
+ * Styling for the classic-editor meta boxes.
+ *
+ * Deliberately thin. This screen is core's, and the controls are core's own
+ * `.regular-text`, `.button` and `.description` classes, so what is left here is
+ * only the structure core has no opinion about: how a group encloses its rules,
+ * and how a field's label sits above its control.
+ *
+ * Nothing here sets a colour. The admin has user-selectable colour schemes and a
+ * high-contrast mode, and a hard-coded border or background is exactly what
+ * breaks in them — so borders reference core's own admin greys through the
+ * variables it already publishes, and fall back to a neutral that works in every
+ * scheme rather than to a brand colour that works in one.
+ */
+
+.popkit-group {
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	margin: 0 0 1em;
+	padding: 0.5em 1em 1em;
+}
+
+.popkit-group > legend {
+	font-weight: 600;
+	padding: 0 0.5em;
+}
+
+.popkit-rule {
+	border-left: 4px solid #dcdcde;
+	margin: 0 0 1em;
+	padding: 0 0 0 1em;
+}
+
+.popkit-rule:last-child {
+	margin-bottom: 0;
+}
+
+.popkit-trigger {
+	border-bottom: 1px solid #f0f0f1;
+	margin: 0 0 1em;
+	padding: 0 0 0.5em;
+}
+
+.popkit-trigger:last-of-type {
+	border-bottom: 0;
+}
+
+/*
+ * Labels sit above their control rather than beside it. A targeting field's
+ * label is a sentence — "Path to match, beginning with a slash" — not a word,
+ * and a sentence in a table cell beside an input wraps into a column two words
+ * wide on the narrow side of the screen.
+ */
+.popkit-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25em;
+}
+
+.popkit-field__label {
+	font-weight: 600;
+}
+
+/* A toggle's label belongs beside its checkbox, so the flex column is wrong for it. */
+.popkit-field--toggle {
+	display: block;
+}
+
+.popkit-field input[type="range"] {
+	max-width: 25em;
+}
+
+.popkit-field select[multiple] {
+	max-width: 25em;
+	min-height: 6em;
+}
+
+.popkit-rule__unavailable {
+	margin: 0.5em 0;
+}

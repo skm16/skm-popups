@@ -1,4 +1,4 @@
-=== popkit ===
+=== PopKit ===
 Contributors: seankyleandmanley
 Tags: popup, modal, accessibility, banner, newsletter
 Requires at least: 6.5
@@ -12,7 +12,7 @@ Accessible, lightweight popups. Native dialogs, full keyboard and screen reader 
 
 == Description ==
 
-popkit builds popups out of the browser's own `<dialog>` element and the block
+PopKit builds popups out of the browser's own `<dialog>` element and the block
 editor, rather than out of a framework and a modal library. The result is a
 frontend bundle of about 6 KB gzipped, a keyboard and screen reader experience
 that behaves the way the platform behaves, and targeting that stays correct
@@ -33,9 +33,12 @@ keyboard, and is undiscoverable by assistive technology, so it is offered as an
   trigger, say — it returns to wherever it was.
 * A form field is never focused on open. Focus lands on the dialog or its
   heading, so a screen reader announces what appeared before what to type.
-* `aria-labelledby` points at the popup's heading. With no heading, the editor
-  warns, because a dialog announced as "dialog" and nothing else tells a
-  visitor that something happened and nothing about what.
+* The popup is named by its own heading — by reference when PopKit anchored
+  that heading itself, and by the heading's text when you gave it an HTML
+  Anchor, so a matching anchor elsewhere on the page can never name the popup
+  with somebody else's words. With no heading, the editor warns, because a
+  dialog announced as "dialog" and nothing else tells a visitor that something
+  happened and nothing about what.
 * Banners are a labelled `region` landmark, not a dialog. Announcing a
   non-modal strip as a dialog is a lie about whether the page behind it is
   usable.
@@ -47,7 +50,7 @@ keyboard, and is undiscoverable by assistive technology, so it is offered as an
 
 A popup plugin that decides what to show by inspecting the visitor cannot work
 behind a page cache: the first visitor's popup gets cached and served to
-everybody. popkit splits the decision instead. The server decides only what the
+everybody. PopKit splits the decision instead. The server decides only what the
 *URL* implies and emits byte-identical HTML for every visitor; anything that
 depends on the person — login state, device width, referrer, campaign
 parameters, visit history — is decided in the browser.
@@ -110,12 +113,12 @@ either is unmet.
 = Cache configuration =
 
 One URL must not be cached: `/wp-json/popkit/v1/context`. It is the only
-response that varies by visitor, and popkit sends `Cache-Control: no-store,
+response that varies by visitor, and PopKit sends `Cache-Control: no-store,
 private` and `Vary: Cookie` on it. Most caches honour that. Some host-level
 configurations cache REST responses regardless, and there the exclusion has to
 be added by hand.
 
-Everything else popkit serves is safe to cache and is identical for every
+Everything else PopKit serves is safe to cache and is identical for every
 visitor.
 
 * **WP Rocket** — the path is excluded automatically by its REST handling; no
@@ -162,24 +165,48 @@ were being used for, and match in linear time.
 
 = Does it load anything on pages with no popup? =
 
-No. If no popup survives targeting, popkit contributes nothing to the response:
+No. If no popup survives targeting, PopKit contributes nothing to the response:
 no script tag, no stylesheet, no inline configuration, no markup.
+
+= Is there a limit to how many popups I can have? =
+
+You can author as many as you like. A single pageview considers **100 published
+popups**, the oldest 100 by publish order, and that limit is applied by the
+database before any targeting is evaluated — so on a site with more than 100
+published popups, the ones past that point cannot appear on any page, whatever
+their targeting says. The most recently published are the ones that lose.
+
+PopKit does not let that happen quietly: once a site crosses the limit, a warning
+appears on the Popups screens saying how many popups are dark and what to do
+about it. Unpublishing or trashing popups you no longer need brings the rest back
+immediately.
+
+Drafted, scheduled and trashed popups do not count — only published ones.
+
+Developers: the candidate query runs with `suppress_filters` false, so
+`pre_get_posts` can raise the bound. A filter that does must keep the query to
+published posts and keep a total order with no ties, or the emitted HTML stops
+being identical for every visitor and the plugin is no longer cache-safe.
 
 = What happens to my popups if I uninstall it? =
 
 They are left alone. Uninstalling removes nothing by default — popups are
 authored content, and deleting a site's content because a plugin was removed is
-not a decision a plugin should make silently. To opt in to full removal, enable
-the "Delete all data on uninstall" setting before deleting the plugin.
+not a decision a plugin should make silently.
+
+To opt in to full removal, go to **Popups → Settings** and tick *Delete all
+PopKit data when the plugin is deleted* before deleting the plugin. That screen
+needs the `manage_options` capability: it authorizes permanently deleting every
+popup on the site, so someone who can write popups cannot arm it on their own.
 
 = Does it send anything to an external service? =
 
-No. popkit makes no external requests of any kind — no analytics, no fonts, no
+No. PopKit makes no external requests of any kind — no analytics, no fonts, no
 CDN, no phone-home, no update check beyond WordPress's own.
 
 == Privacy ==
 
-popkit collects nothing, stores nothing about visitors on the server, and
+PopKit collects nothing, stores nothing about visitors on the server, and
 contacts no external service.
 
 = The context endpoint =
@@ -212,7 +239,7 @@ transient, no user meta, no database write of any kind.
 = What is stored in the visitor's browser =
 
 Frequency capping needs to remember that a popup was shown. Depending on the
-frequency mode a popup uses, popkit writes one key per popup — `popkit:seen:{id}`
+frequency mode a popup uses, PopKit writes one key per popup — `popkit:seen:{id}`
 — to:
 
 * `sessionStorage` — for "once per session", cleared when the tab closes.
@@ -229,14 +256,15 @@ Popups using the "every time" frequency mode read and write nothing at all.
 
 Popups are a custom post type, with their configuration in post meta. That is
 authored content and is treated as such: uninstalling the plugin leaves it in
-place unless the "Delete all data on uninstall" setting has been enabled.
+place unless *Delete all PopKit data when the plugin is deleted* has been ticked
+under **Popups → Settings**.
 
-popkit records nothing about who saw a popup, when, or whether they interacted
+PopKit records nothing about who saw a popup, when, or whether they interacted
 with it. There is no analytics table and no event log.
 
 == Accessibility ==
 
-popkit is built to the WordPress accessibility-ready guidelines, and its
+PopKit is built to the WordPress accessibility-ready guidelines, and its
 accessibility behaviour is covered by automated tests rather than asserted here.
 
 = Criteria met =
@@ -250,14 +278,17 @@ accessibility behaviour is covered by automated tests rather than asserted here.
 * **Skip links and landmarks** — the banner layout is a labelled `region`
   landmark. It is not announced as a dialog, because the page behind it stays
   usable.
-* **Headings** — the popup's accessible name comes from its own heading via
-  `aria-labelledby`, falling back to the post title. The editor warns when a
-  popup would be announced only as "Popup".
+* **Headings** — the popup's accessible name comes from its own heading,
+  falling back to the post title. A heading PopKit anchored is referenced with
+  `aria-labelledby`; a heading you anchored yourself is named by its text
+  instead, because an anchor PopKit did not create may also exist on the page
+  behind the popup, and the page's copy would win. The editor warns when a popup
+  would be announced only as "Popup".
 * **Contrast** — shipped themes meet WCAG 2.2 AA in both layouts: 4.5:1 for body
   text and 3:1 for interface boundaries. Contrast is verified by measuring
   colours as a browser actually renders them, not by reading the stylesheet.
 * **Images of text** — none are used.
-* **Media** — popkit ships no audio or video and adds no autoplaying media.
+* **Media** — PopKit ships no audio or video and adds no autoplaying media.
 * **Reduced motion** — `prefers-reduced-motion: reduce` makes transitions
   instant rather than shortened.
 * **Forced colors** — the focus indicator is an `outline`, which forced-colors
@@ -266,7 +297,7 @@ accessibility behaviour is covered by automated tests rather than asserted here.
 
 = Known limitations =
 
-Popup *content* is authored with blocks, and popkit cannot make an inaccessible
+Popup *content* is authored with blocks, and PopKit cannot make an inaccessible
 block accessible. An image without alternative text inside a popup is still an
 image without alternative text. The editor warns about the popup-level problems
 it can see — a missing accessible name, a schedule that has already expired, a

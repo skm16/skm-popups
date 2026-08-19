@@ -57,6 +57,37 @@
 		</properties>
 	</rule>
 
+	<!--
+		The capabilities `Popkit\Capabilities` registers on activation. The sniff
+		knows core's list and nothing else, so without this every legitimate
+		`current_user_can( 'edit_popkit_popups' )` is reported as a possible typo —
+		which trains a reader to skim capability warnings, and a real typo in a
+		capability check fails *open*.
+
+		Keep this in step with Capabilities::primitives(); the test suite asserts
+		that list against the post type's declared capability mapping.
+	-->
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="edit_popkit_popup"/>
+				<element value="read_popkit_popup"/>
+				<element value="delete_popkit_popup"/>
+				<element value="edit_popkit_popups"/>
+				<element value="edit_others_popkit_popups"/>
+				<element value="publish_popkit_popups"/>
+				<element value="read_private_popkit_popups"/>
+				<element value="delete_popkit_popups"/>
+				<element value="delete_private_popkit_popups"/>
+				<element value="delete_published_popkit_popups"/>
+				<element value="delete_others_popkit_popups"/>
+				<element value="edit_private_popkit_popups"/>
+				<element value="edit_published_popkit_popups"/>
+				<element value="create_popkit_popups"/>
+			</property>
+		</properties>
+	</rule>
+
 	<!-- Global functions, classes, constants and variables carry a popkit prefix. -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>

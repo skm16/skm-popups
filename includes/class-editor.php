@@ -251,7 +251,7 @@ final class Editor {
 
 		printf(
 			'<div class="notice notice-error"><p><strong>%1$s</strong> %2$s</p></div>',
-			esc_html__( 'The popkit editor panels could not be loaded.', 'popkit' ),
+			esc_html__( 'The PopKit editor panels could not be loaded.', 'popkit' ),
 			esc_html(
 				sprintf(
 					/* translators: 1: build command to run, 2: path of the missing file, relative to the plugin directory. */

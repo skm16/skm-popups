@@ -48,10 +48,12 @@ defined( 'ABSPATH' ) || exit;
  * `docs/CLAUDE.md` -> Accessibility requires an accessible name in every case,
  * so this resolves one in three steps and the last cannot fail:
  *
- * 1. `aria-labelledby` pointing at the first heading in the rendered content.
- *    An `id` the author already set is used as it stands; otherwise one is added.
- * 2. `aria-label` carrying the post title, when the content has no heading.
- * 3. `aria-label` carrying a generic translated word, when the popup has no
+ * 1. `aria-labelledby` pointing at the first heading in the rendered content,
+ *    carrying an `id` popkit minted itself.
+ * 2. `aria-label` carrying that heading's own text, when the author already gave
+ *    it an `id`. Their `id` is left exactly where it is — see below.
+ * 3. `aria-label` carrying the post title, when the content has no heading.
+ * 4. `aria-label` carrying a generic translated word, when the popup has no
  *    title either. A weak name is worth having; an unnamed dialog is announced
  *    as nothing at all.
  *
@@ -60,10 +62,31 @@ defined( 'ABSPATH' ) || exit;
  * and requiring the heading to come first would drop the real name in exactly
  * those cases and fall back to a post title written for the admin list table.
  *
+ * ### Why an author's `id` names by text instead
+ *
+ * Step 2 exists because `aria-labelledby` is an IDREF, and an IDREF is a claim
+ * about the *whole document*. A popup is printed on `wp_footer`, at the very end
+ * of a page popkit did not write and cannot see, so it can never make that claim
+ * about an `id` it did not mint. An author who sets the block editor's HTML
+ * Anchor to `newsletter` on a popup heading, on a site whose footer already has
+ * a `<section id="newsletter">`, gets a dialog announced with that section's
+ * entire text: the reference resolves to the first match in tree order, and the
+ * page's own element comes first.
+ *
+ * Reading the heading's text sidesteps the ambiguity without touching a byte of
+ * the author's markup — their anchor links and their CSS keep working, and the
+ * name describes the popup. `TITLE_ID_PREFIX . $popup->ID` stays the mechanism
+ * for the overwhelmingly common heading with no anchor, so nothing changes in
+ * the bytes those popups emit.
+ *
  * The one case this cannot see is a heading element that is present but empty.
- * Reading a heading's text back out of rendered HTML needs an API popkit's
- * minimum WordPress does not have, so the Phase 5 editor warning for a missing
- * accessible name has to cover an empty heading as well as an absent one.
+ * That is a deliberate limit of step 1 rather than a platform one: the generated
+ * branch never needs the text, so it does not pay to extract it, and the Phase 5
+ * editor warning covers an empty heading as well as an absent one. An earlier
+ * version of this docblock claimed the text could not be read at popkit's
+ * minimum WordPress at all. That was wrong — `WP_HTML_Tag_Processor::next_token()`,
+ * `::get_token_type()` and `::get_modifiable_text()` are all `@since 6.5.0`, and
+ * step 2 uses them.
  *
  * ## The close button
  *
@@ -410,15 +433,21 @@ final class Renderer {
 	 * what keeps `docs/CLAUDE.md` -> Security's ban on running a regular
 	 * expression over authored input intact.
 	 *
-	 * An `id` the author set is used unchanged. Overwriting it would break their
-	 * own anchor links and their own CSS.
+	 * An `id` the author set is left exactly as it is — overwriting it would break
+	 * their own anchor links and their own CSS — and is *not* used as the label
+	 * target. Those are two different decisions, and only the first one was made
+	 * originally: "the heading has an `id`" is not the same claim as "that `id`
+	 * resolves to this heading", and the second is a statement about a document
+	 * this fragment is only appended to. Such a heading is named by its own text
+	 * instead. See the class docblock -> Accessible name.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param string  $content Rendered popup content.
 	 * @param WP_Post $popup   Popup being rendered.
 	 * @return array{content: string, labelledby: string|null, label: string|null} Content to
-	 *               print, plus exactly one of the two naming values.
+	 *               print, plus exactly one of the two naming values. A heading can
+	 *               yield either arm; only a popkit-minted `id` yields `labelledby`.
 	 */
 	private static function accessible_name( string $content, WP_Post $popup ): array {
 		$processor = new WP_HTML_Tag_Processor( $content );
@@ -431,10 +460,17 @@ final class Renderer {
 			$existing = $processor->get_attribute( 'id' );
 
 			if ( is_string( $existing ) && '' !== trim( $existing ) ) {
+				/*
+				 * The content is returned verbatim: nothing is set on the
+				 * processor in this branch, so the author's markup — their `id`
+				 * included — is passed through byte for byte.
+				 */
+				$text = self::heading_text( $processor, (string) $processor->get_tag() );
+
 				return array(
 					'content'    => $content,
-					'labelledby' => $existing,
-					'label'      => null,
+					'labelledby' => null,
+					'label'      => '' !== $text ? $text : self::fallback_label( $popup ),
 				);
 			}
 
@@ -454,6 +490,80 @@ final class Renderer {
 			'labelledby' => null,
 			'label'      => self::fallback_label( $popup ),
 		);
+	}
+
+	/**
+	 * Reads a heading's text, flattened, starting from its opening tag.
+	 *
+	 * Nested markup is flattened rather than skipped, so
+	 * `<h2>Join our <em>free</em> newsletter</h2>` names the popup "Join our free
+	 * newsletter" — the same string `aria-labelledby` would have computed from
+	 * that element, which is the point: step 2 has to be a faithful substitute
+	 * for step 1, not a different name.
+	 *
+	 * A heading that never closes returns an empty string, so the caller falls
+	 * back to the post title. The alternative is swallowing the whole rest of the
+	 * popup into its own accessible name, which is a worse failure than a generic
+	 * one and is silent besides.
+	 *
+	 * `get_modifiable_text()` returns text with entities already decoded, so
+	 * `Buy 1 &amp; get 1` arrives as `Buy 1 & get 1` and {@see self::attributes()}
+	 * re-encodes it on the way out through `esc_attr()`. That round trip is
+	 * correct and deliberate — it is not a missing escape, and adding one would
+	 * double-encode the ampersand.
+	 *
+	 * Whitespace is collapsed with string functions rather than a pattern.
+	 * `docs/CLAUDE.md` -> Security bans running a regular expression over authored
+	 * input, and `tests/php/unit/test-no-regex-invariant.php` enforces that by
+	 * scanning this directory for `preg_*`. Swapping this for `preg_replace()` or
+	 * for `normalize_whitespace()` would be a regression, not a tidy-up.
+	 *
+	 * The processor is left wherever the walk stopped. Every caller returns
+	 * immediately afterwards; this must not be used to resume a scan.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param WP_HTML_Tag_Processor $processor Positioned on the heading's opening tag.
+	 * @param string                $tag       That heading's tag name, as get_tag() reports it.
+	 * @return string Flattened text, or an empty string when the heading does not close.
+	 */
+	private static function heading_text( WP_HTML_Tag_Processor $processor, string $tag ): string {
+		$text   = '';
+		$closed = false;
+
+		while ( $processor->next_token() ) {
+			if ( $tag === $processor->get_tag() && $processor->is_tag_closer() ) {
+				$closed = true;
+				break;
+			}
+
+			if ( '#text' === $processor->get_token_type() ) {
+				$text .= $processor->get_modifiable_text();
+			}
+		}
+
+		if ( ! $closed ) {
+			return '';
+		}
+
+		/*
+		 * U+00A0 is in this list because a heading holding only `&nbsp;` reads as
+		 * blank and must fall back to the post title. The Phase 5 editor warning
+		 * treats it the same way, and the two have to agree about what "empty"
+		 * means or a popup warns in the editor and is named a space on the page.
+		 */
+		$flattened = str_replace(
+			array( "\r\n", "\r", "\n", "\t", "\f", "\v", "\u{00A0}" ),
+			' ',
+			$text
+		);
+
+		$words = array_filter(
+			explode( ' ', $flattened ),
+			static fn ( string $part ): bool => '' !== $part
+		);
+
+		return implode( ' ', $words );
 	}
 
 	/**

@@ -233,8 +233,14 @@ Non-negotiable. This is the product differentiator, not a polish item.
 - Focus returns to the element that triggered the popup on close. If the trigger
   was not a user interaction, focus returns to where it was before opening.
 - Never autofocus a form field on open. Focus the dialog container or its heading.
-- `aria-labelledby` points at the popup's heading. If there is no heading,
-  `aria-label` is required and the editor warns when both are absent.
+- `aria-labelledby` points at the popup's heading, and **only ever at an `id`
+  popkit minted itself**. An IDREF is a claim about the whole document, and a
+  popup printed on `wp_footer` cannot make that claim about an `id` an author
+  set: a page element carrying the same `id` resolves first and names the dialog
+  with its text. A heading with an author anchor is therefore named by
+  `aria-label` carrying that heading's own text, with the anchor left untouched.
+  If there is no heading at all, `aria-label` falls back to the post title and
+  the editor warns when the popup would be announced as nothing useful.
 - Escape closes. This is native `<dialog>` behavior — do not `preventDefault` it.
 - Close control is a real `<button>`, minimum 44×44px hit area, with an
   accessible name. Not a `<span>`, not an icon font, not a bare `×`.
@@ -269,7 +275,9 @@ The evaluation pipeline runs in a fixed order. Do not reorder or merge stages.
 
 ```
 SERVER (cacheable, varies only by URL)
-  1. Query published popups
+  1. Query the oldest `Frontend::MAX_POPUPS` (100) published popups. The limit is
+     a SQL `LIMIT` applied *before* targeting, so it bounds candidates rather
+     than matches; `Post_Type::render_popup_limit_notice()` discloses it.
   2. Evaluate Context::Server rules
        server rule false        → group fails
        client rule              → indeterminate, group survives
@@ -403,9 +411,24 @@ Registration declares the full set and activation assigns it.
 Uninstall removes plugin **infrastructure** — options, transients, capabilities.
 It does **not** delete authored content unless the site owner opts in.
 
-A setting, `popkit_delete_data_on_uninstall`, **defaults to `false`**. Only when
-explicitly enabled does uninstall remove `popkit_popup` posts and their meta.
-The setting's description states plainly that the action is irreversible.
+The opt-in **defaults to `false`**. Only when explicitly enabled does uninstall
+remove `popkit_popup` posts and their meta, and its description states plainly
+that the action is irreversible.
+
+Three names for one decision, which is worth stating precisely because an earlier
+version of this section named only the last of them and `readme.txt` inherited
+the confusion:
+
+- **Canonical storage** is `popkit_settings[delete_data_on_uninstall]`.
+- **The primary surface** is **Popups → Settings**, rendered by
+  `Popkit\Settings_Page` and gated on `manage_options` — not on
+  `edit_popkit_popups`, because arming this destroys content an author does not
+  own.
+- **`popkit_delete_data_on_uninstall`** is a standalone-option *fallback*, for a
+  site owner or WP-CLI script that set the documented name directly. It is
+  honored only while the canonical row has never been written, so it stops being
+  read the first time anyone saves the screen. Do not document it as the front
+  door.
 
 Deleting a client's authored popups because a plugin was removed during routine
 maintenance is not acceptable behavior, and "the docs said it would" is not a

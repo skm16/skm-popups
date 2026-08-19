@@ -11,19 +11,26 @@
  * callable syntax, `never`, enums, or any other PHP 7.1+ construct to this file.
  *
  * @package Popkit
- * @author  Sean Kyle and Manley
+ * @author  Sean Roberts
  * @license GPL-2.0-or-later
- * @link    https://github.com/seankyleandmanley/popkit
+ * @link    https://github.com/skm16/skm-popups
+ *
+ * The display name is "PopKit". The text domain, the slug, the option and meta
+ * keys, the CSS class prefix and the PHP namespace all stay lowercase `popkit`
+ * and must not be renamed to match: WordPress.org slugs are lowercase, Plugin
+ * Check requires the text domain to equal the slug, and every one of those names
+ * is already written into stored data or into translations. Capitalisation here
+ * is presentation.
  *
  * @wordpress-plugin
- * Plugin Name:       popkit
- * Plugin URI:        https://github.com/seankyleandmanley/popkit
+ * Plugin Name:       PopKit
+ * Plugin URI:        https://github.com/skm16/skm-popups
  * Description:       Accessible, lightweight popups. Native dialogs, full keyboard and screen reader support, cache-safe targeting, and no jQuery.
  * Version:           0.1.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
- * Author:            Sean Kyle and Manley
- * Author URI:        https://seankyleandmanley.com/
+ * Author:            Sean Roberts
+ * Author URI:        https://SKM.digital
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       popkit

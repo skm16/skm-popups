@@ -39,35 +39,65 @@
  * ## Check the archive, not the working tree
  *
  * This matters more than the transport. Run against the checkout, Plugin Check
- * reported 38 errors and 28 warnings, and **every one** was a development file:
+ * reports 37 errors and 27 warnings, and **every one** is a development file:
  * `tests/`, `.github`, `.gitignore`, `phpunit.xml.dist`, a stray Playwright
  * trace. None of it ships. Run against `build/popkit` — what `npm run build:zip`
  * assembles and what a user actually installs — the same plugin reports zero and
  * zero.
  *
- * So the meaningful invocation points at the staged build. Checking the working
- * tree measures the repository, which is not the thing being submitted.
+ * So this points at the staged build, and it did not always. An earlier version
+ * of this file argued exactly the above in prose and then scanned the repository
+ * root anyway, because `PLUGIN_PATH` defaulted to the `.wp-env.json` mapping of
+ * the checkout. The comment was right and the code was wrong, which is the worse
+ * way round: the gate `docs/CLAUDE.md` -> Verification calls mandatory could
+ * never pass, and the CI job that runs it was red on every commit for findings
+ * that do not exist in the artifact being released.
+ *
+ * The staged tree is built here rather than assumed. `build/popkit` is a build
+ * artifact, so a stale one would have this checking bytes that are not the bytes
+ * `build:zip` would package — the one direction in which this check and the ZIP
+ * can genuinely diverge, and the direction that under-reports. Running the
+ * staging step first removes it: `tools/build-zip.mjs` owns the allowlist, so
+ * the tree scanned here is the release by construction rather than by a second
+ * copy of the same list.
  */
 
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire( import.meta.url );
 
+/** Repository root — the parent of `tools/`. */
+const ROOT = path.dirname( path.dirname( fileURLToPath( import.meta.url ) ) );
+
 /**
- * Path to the plugin *inside the container*, relative to the WordPress root.
+ * Path to the tree being checked, *inside the container*, relative to the
+ * WordPress root.
  *
  * Deliberately not derived from the host directory name. `@wordpress/env` mounts
- * the project according to `.wp-env.json`, which maps popkit to
- * `wp-content/plugins/popkit` whatever the checkout is called; the CI workflow
- * pins the same value in `POPKIT_WP_ENV_PLUGIN_PATH`. Plugin Check resolves a
- * directory argument to a slug via `basename()`, so this must match the mount,
- * not the repository folder.
+ * the project according to `.wp-env.json`, which maps the checkout to
+ * `wp-content/plugins/popkit` whatever the folder is called; the CI workflow
+ * pins the same value in `POPKIT_WP_ENV_PLUGIN_PATH`. The staged release tree
+ * therefore appears one level further down, at `build/popkit`.
+ *
+ * That trailing `popkit` is load bearing. Plugin Check resolves a directory
+ * argument to a slug with `basename()`, and several checks compare the slug
+ * against the text domain — so a staging directory named anything else would
+ * report i18n errors that describe the staging directory rather than the plugin.
+ * `build/popkit` keeps the basename correct while keeping the staged tree out of
+ * the way of the checkout.
  */
-const PLUGIN_PATH =
+const MOUNT_PATH =
 	process.env.POPKIT_WP_ENV_PLUGIN_PATH || 'wp-content/plugins/popkit';
+
+/** The staged release tree, relative to the mount. See `tools/build-zip.mjs`. */
+const STAGED_SUBPATH = 'build/popkit';
+
+const PLUGIN_PATH = path.posix.join( MOUNT_PATH, STAGED_SUBPATH );
 
 /** The container filesystem root for both wp-env WordPress containers. */
 const CONTAINER_WP_ROOT = '/var/www/html';
@@ -172,6 +202,36 @@ function fail( message ) {
 }
 
 const forwardedArgs = process.argv.slice( 2 );
+
+/*
+ * Stage the release tree before checking it, so what is scanned is what would
+ * ship rather than whatever `build/` happens to hold. `--no-zip` stops
+ * `build-zip.mjs` after staging and verification; compression is the only step
+ * in it that needs PowerShell, and this has to run on the Linux CI runner too.
+ */
+process.stdout.write( 'popkit: staging the release tree…\n' );
+
+const staged = spawnSync(
+	process.execPath,
+	[ path.join( ROOT, 'tools', 'build-zip.mjs' ), '--no-zip' ],
+	{ cwd: ROOT, stdio: [ 'ignore', 'pipe', 'inherit' ], encoding: 'utf8' }
+);
+
+if ( 0 !== staged.status ) {
+	fail(
+		`could not stage the release tree (build-zip.mjs exited ${ staged.status }). Plugin Check has nothing to inspect.\n${
+			staged.stdout ?? ''
+		}`
+	);
+}
+
+// Belt and braces: build-zip.mjs already refuses to finish without these, but a
+// missing tree here would silently become "wp-env cannot resolve the path".
+if ( ! fs.existsSync( path.join( ROOT, 'build', 'popkit', 'popkit.php' ) ) ) {
+	fail(
+		'the staged tree at build/popkit is missing after staging. Run `npm run build:zip` and read its output.'
+	);
+}
 
 const result = spawnSync(
 	process.execPath,

@@ -331,18 +331,38 @@ final class Plugin {
 	/**
 	 * Extension point: admin and block editor.
 	 *
-	 * {@see Editor::init()} attaches two hooks and returns. It is called
-	 * unconditionally rather than behind an `is_admin()` test, because both hooks
-	 * it registers — `enqueue_block_editor_assets` and `admin_notices` — only fire
-	 * in the admin anyway, and each callback re-checks the screen for itself. An
-	 * `is_admin()` guard here would add a second place the answer is decided
-	 * without removing the first.
+	 * Both callees attach hooks and return. Each is called unconditionally rather
+	 * than behind an `is_admin()` test, because every hook they register —
+	 * `enqueue_block_editor_assets`, `admin_notices`, `admin_menu` — only fires in
+	 * the admin anyway, and each callback re-checks the screen or the capability
+	 * for itself. An `is_admin()` guard here would add a second place the answer
+	 * is decided without removing the first.
+	 *
+	 * {@see Settings_Page::init()} is here rather than in the block editor sidebar
+	 * because what it renders is a decision about the *site* — whether removing
+	 * the plugin should take the site's popups with it — and a site-level control
+	 * repeated once per popup would be five places able to disarm each other.
+	 * {@see Editor::init()} owns the per-popup UI and its docblock scopes it to
+	 * the block editor.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return void
 	 */
 	private function boot_admin(): void {
-		Editor::init();
+		Editor_Mode::init();
+
+		/*
+		 * Exactly one authoring surface mounts. Both write the same post meta, so
+		 * running them together would mean a popup's settings depended on which
+		 * screen was saved last.
+		 */
+		if ( Editor_Mode::uses_block_editor() ) {
+			Editor::init();
+		} else {
+			Classic_Editor::init();
+		}
+
+		Settings_Page::init();
 	}
 }

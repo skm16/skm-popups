@@ -217,7 +217,7 @@ final class Activator {
 
 		wp_die(
 			esc_html( implode( ' ', Requirements::failures() ) ),
-			esc_html__( 'popkit could not be activated', 'popkit' ),
+			esc_html__( 'PopKit could not be activated', 'popkit' ),
 			array(
 				'back_link' => true,
 				'response'  => 200,

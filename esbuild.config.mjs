@@ -69,6 +69,35 @@ const builds = [
 			outdir: 'dist',
 		},
 	},
+	/*
+	 * The classic-editor meta box assets.
+	 *
+	 * Built here rather than by wp-scripts because they are plain DOM code with
+	 * no JSX, no React and no `@wordpress/*` import — the same reasons the front
+	 * end is built here. They are also admin-only, so they are outside the front
+	 * end's size budget: `npm run size` measures what a *visitor* downloads, and
+	 * these are never enqueued on the front end.
+	 */
+	{
+		label: 'dist/classic.js',
+		entry: 'src/classic/index.js',
+		options: {
+			...sharedOptions,
+			entryPoints: [ { in: 'src/classic/index.js', out: 'classic' } ],
+			outdir: 'dist',
+			platform: 'browser',
+			format: 'iife',
+		},
+	},
+	{
+		label: 'dist/classic.css',
+		entry: 'src/styles/classic.css',
+		options: {
+			...sharedOptions,
+			entryPoints: [ { in: 'src/styles/classic.css', out: 'classic' } ],
+			outdir: 'dist',
+		},
+	},
 ];
 
 /**

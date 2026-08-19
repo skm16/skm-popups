@@ -38,6 +38,20 @@
  * nothing. This runs the production build itself rather than trusting that
  * someone ran it, and refuses to package a tree where the expected outputs are
  * missing afterwards.
+ *
+ * ## `--no-zip`
+ *
+ * Stops after staging and verifying `build/popkit`, skipping compression.
+ *
+ * `tools/plugin-check.mjs` uses it. Plugin Check has to inspect the bytes that
+ * ship, and the only tree that is definitionally those bytes is the one this
+ * script assembles — so rather than describing the allowlist twice, the checker
+ * runs this and scans what it produced.
+ *
+ * Compression is also the one step here that is not portable: it shells into
+ * `powershell.exe`, which does not exist on the Linux runner CI uses. Staging
+ * is pure Node and runs anywhere, so `--no-zip` is what makes this script
+ * usable as a CI build step rather than only as a local release step.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -51,6 +65,9 @@ const BUILD = path.join( ROOT, 'build' );
 const SLUG = 'popkit';
 const STAGE = path.join( BUILD, SLUG );
 const ZIP = path.join( BUILD, `${ SLUG }.zip` );
+
+/** Stage and verify, then stop. See the `--no-zip` note above. */
+const STAGE_ONLY = process.argv.slice( 2 ).includes( '--no-zip' );
 
 /**
  * Everything that ships, relative to the plugin root.
@@ -82,6 +99,11 @@ const REQUIRED = [
 	'dist/frontend.css',
 	'dist/editor.js',
 	'dist/editor.asset.php',
+	// The classic-editor meta boxes enqueue these unconditionally on the popup
+	// screens. Absent, a site running the classic editor gets a 404 for both and
+	// a targeting box whose Add rule button does nothing.
+	'dist/classic.js',
+	'dist/classic.css',
 	'languages/popkit.pot',
 ];
 
@@ -214,6 +236,11 @@ for ( const required of REQUIRED ) {
 			`"${ required }" is missing from the staged tree. The archive would install and then fail at runtime.`
 		);
 	}
+}
+
+if ( STAGE_ONLY ) {
+	say( `staged tree verified at ${ path.relative( ROOT, STAGE ) }; skipping zip.` );
+	process.exit( 0 );
 }
 
 /*

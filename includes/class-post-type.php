@@ -1,6 +1,6 @@
 <?php
 /**
- * The popup custom post type.
+ * The popup custom post type, and the one warning its admin screens carry.
  *
  * @package Popkit
  * @since   0.1.0
@@ -12,6 +12,13 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Registers `popkit_popup`, the post type every popup is stored in.
+ *
+ * It also owns one admin notice, {@see self::render_popup_limit_notice()}. That
+ * is a second responsibility and it is deliberate: the condition it reports is a
+ * property of how many popups exist, and the screens where an author can act on
+ * it — the list table, the editor — are this post type's own. `Editor` was the
+ * alternative home and its docblock scopes it to the block editor, while the
+ * remedy lives on the list screen.
  *
  * The arguments are the table in `docs/data-model.md` -> Post type, expressed
  * once. Three of them are load bearing and are not preferences:
@@ -88,6 +95,17 @@ final class Post_Type {
 	 * @return void
 	 */
 	public static function init(): void {
+		/*
+		 * Array callable rather than a first-class callable, for the reason given
+		 * on Rest_Schema::init(): a stable identity, so WordPress deduplicates it,
+		 * a test can assert it by name, and a site owner can remove it.
+		 *
+		 * Registered unconditionally. `admin_notices` only fires in the admin, so
+		 * gating this on `is_admin()` would buy nothing and would make the hook
+		 * table depend on the request.
+		 */
+		add_action( 'admin_notices', array( self::class, 'render_popup_limit_notice' ) );
+
 		if ( did_action( 'init' ) ) {
 			self::register();
 
@@ -95,6 +113,79 @@ final class Post_Type {
 		}
 
 		add_action( 'init', self::register( ... ) );
+	}
+
+	/**
+	 * Warns on the popup screens when the site has more popups than are considered.
+	 *
+	 * {@see Frontend::MAX_POPUPS} is a `LIMIT` the database applies before any
+	 * targeting runs, so a site holding more published popups than that has some
+	 * which cannot appear on any URL — and, because the candidate query is
+	 * ordered by ascending ID, the ones that lose are the most recently
+	 * published. An author who has just written a popup, published it, and cannot
+	 * work out why it never shows is exactly the person this notice is for.
+	 *
+	 * The count comes from `wp_count_posts()` rather than from the front-end
+	 * query, which means it ignores any `pre_get_posts` filter a multilingual
+	 * plugin uses to scope popups per language. A site with sixty English and
+	 * sixty French popups is warned even though neither language's candidate set
+	 * is over the cap. That is over-warning, never under-warning, and the wording
+	 * stays literally true in that case.
+	 *
+	 * Not dismissible, deliberately: the condition is permanent while the count
+	 * holds, and a dismissed notice would hide a popup that is still dark.
+	 *
+	 * Cache safety is not at issue and cannot become so. Everything here is
+	 * behind an admin-screen gate, `wp_count_posts()` never runs on a front-end
+	 * request, and nothing it returns reaches the emitted response.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return void
+	 */
+	public static function render_popup_limit_notice(): void {
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return;
+		}
+
+		$screen = get_current_screen();
+
+		// Fails closed on an unknown screen. One check covers edit.php, post.php
+		// and post-new.php, so the warning is on the screen the author publishes
+		// from and on the screen where the remedy lives.
+		if ( ! $screen instanceof \WP_Screen || self::POST_TYPE !== $screen->post_type ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_popkit_popups' ) ) {
+			return;
+		}
+
+		$counts    = wp_count_posts( self::POST_TYPE );
+		$published = isset( $counts->publish ) ? (int) $counts->publish : 0;
+
+		if ( $published <= Frontend::MAX_POPUPS ) {
+			return;
+		}
+
+		$message = sprintf(
+			/* translators: 1: maximum number of popups considered on a page, 2: number of published popups on the site, 3: number of popups that cannot display. */
+			__(
+				'PopKit considers at most %1$d popups on a page, the oldest %1$d by publish order. This site has %2$d published popups, so %3$d of them — the most recently published — cannot appear on any page, whatever their targeting says. Unpublish or trash the popups you no longer need.',
+				'popkit'
+			),
+			Frontend::MAX_POPUPS,
+			$published,
+			$published - Frontend::MAX_POPUPS
+		);
+
+		wp_admin_notice(
+			esc_html( $message ),
+			array(
+				'type'        => 'warning',
+				'dismissible' => false,
+			)
+		);
 	}
 
 	/**

@@ -103,7 +103,7 @@ final class Settings {
 			self::OPTION,
 			array(
 				'type'              => 'object',
-				'description'       => __( 'popkit plugin settings.', 'popkit' ),
+				'description'       => __( 'PopKit plugin settings.', 'popkit' ),
 				'default'           => self::defaults(),
 				'sanitize_callback' => self::sanitize( ... ),
 				'show_in_rest'      => array(
@@ -232,7 +232,7 @@ final class Settings {
 	 * @return string
 	 */
 	public static function delete_data_label(): string {
-		return __( 'Delete all popkit data when the plugin is deleted', 'popkit' );
+		return __( 'Delete all PopKit data when the plugin is deleted', 'popkit' );
 	}
 
 	/**

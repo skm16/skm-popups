@@ -134,10 +134,30 @@ final class Frontend {
 	 * Most popups considered on a single pageview.
 	 *
 	 * A bound rather than an unlimited query, because this runs on every
-	 * front-end request. Overshooting it drops popups from the response, which
-	 * fails in the safe direction — a popup that is not emitted cannot show —
-	 * and a site with more than this many *published* popups matching one page
-	 * has an authoring problem that a bigger query would not solve.
+	 * front-end request.
+	 *
+	 * **What it bounds is the candidate set, not the matched set.** The limit is
+	 * a SQL `LIMIT` applied by the database in {@see self::query_popups()},
+	 * before {@see Rule_Evaluator} has judged a single rule. So the oldest
+	 * `MAX_POPUPS` published popups are the only ones targeting ever sees, and a
+	 * popup ranked below the cut cannot appear on any URL whatever its rules say
+	 * — even on a site where none of the hundred above it match the page being
+	 * served.
+	 *
+	 * That is truncation. An earlier version of this docblock justified the cap
+	 * by saying a site with this many published popups "matching one page" has an
+	 * authoring problem; nothing implements a cap on popups matching a page, and
+	 * the claim described a limit the code does not have. The other half of it
+	 * was right and is why the query still works this way: overshooting drops
+	 * popups from the response, which fails in the safe direction, because a
+	 * popup that is not emitted cannot show.
+	 *
+	 * Failing closed is not the same as failing visibly, though, and truncation
+	 * is only acceptable here because it is announced:
+	 * {@see Post_Type::render_popup_limit_notice()} tells an author on the popup
+	 * admin screens when their site has crossed it. A site that must raise the
+	 * bound can do so through `pre_get_posts`, which reaches this query — see
+	 * {@see self::query_popups()}.
 	 *
 	 * @since 0.1.0
 	 * @var int
@@ -395,7 +415,8 @@ final class Frontend {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @return WP_Post[] Surviving popups, oldest first.
+	 * @return WP_Post[] Surviving popups, oldest first, drawn from at most
+	 *                   MAX_POPUPS candidates. See {@see self::MAX_POPUPS}.
 	 */
 	public static function matched_popups(): array {
 		if ( null !== self::$matched ) {
@@ -565,7 +586,7 @@ final class Frontend {
 	/**
 	 * Queries published popups.
 	 *
-	 * Pipeline stage 1. Four of these arguments are load bearing:
+	 * Pipeline stage 1. Five of these arguments are load bearing:
 	 *
 	 * - `post_status => 'publish'` and nothing else. `'readable'` and `'any'` both
 	 *   resolve against the current user, which would make the matched set — and
@@ -581,10 +602,23 @@ final class Frontend {
 	 * - `update_post_term_cache => false`. Nothing here reads a popup's terms; the
 	 *   `taxonomy_term` condition asks about the *queried* object, not about the
 	 *   popup.
+	 * - `posts_per_page => MAX_POPUPS`. A `LIMIT` the database applies *before*
+	 *   any targeting runs, so it selects candidates rather than winners: with
+	 *   more published popups than the cap, the ones past it are invisible to
+	 *   this request no matter what their rules would have said. Combined with
+	 *   the ascending ID order above, the popups that lose are the most recently
+	 *   published — which is why {@see Post_Type::render_popup_limit_notice()}
+	 *   exists to say so on the screen the author publishes from.
+	 *
+	 * A site that must consider more can raise the bound through `pre_get_posts`,
+	 * which reaches this query because `suppress_filters` is false. A filter that
+	 * does so has to preserve the other two invariants or it breaks cache safety
+	 * rather than extending it: publish-only status, and a total order with no
+	 * ties.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @return WP_Post[] Published popups, oldest first.
+	 * @return WP_Post[] At most MAX_POPUPS published popups, oldest first.
 	 */
 	private static function query_popups(): array {
 		$popups = get_posts(

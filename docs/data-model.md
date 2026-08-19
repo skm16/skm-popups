@@ -130,6 +130,28 @@ Within the bounds, values are stored unmodified: no key reordering, no type
 coercion, no stripping of unrecognized keys. A registered condition must see byte-
 identical values after a deactivate/reactivate cycle.
 
+### The one bound that does truncate
+
+"A rule is never silently truncated" is a claim about rule *values*, where
+refusing is available — a save can fail and say why. It is not a claim about the
+plugin as a whole, and there is exactly one bound that behaves the other way.
+
+`Frontend::MAX_POPUPS` caps the front-end query at 100 published popups, ordered
+by ascending ID. It is a SQL `LIMIT`, applied before a single rule is evaluated,
+so it selects candidates rather than winners: on a site with more than 100
+published popups, the ones past the cut cannot appear on any URL however their
+targeting is written, and the ones that lose are the most recently published.
+
+That cannot be resolved the way rule bounds are, because you cannot refuse a
+pageview the way you can refuse a save. Serving an error to a visitor because the
+site has too many popups would be a far worse failure than dropping some. So the
+bound truncates, and is reconciled by being **announced** rather than by being
+removed: `Post_Type::render_popup_limit_notice()` warns on the popup admin
+screens once a site crosses it, naming the count and the remedy. A site that must
+consider more can raise it through `pre_get_posts`.
+
+Truncating silently would be the defect. Truncating visibly is the trade.
+
 Objects and resources are rejected outright. Nothing is ever unserialized.
 
 > A group that failed server-side is not emitted at all. The client never sees

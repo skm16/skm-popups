@@ -132,18 +132,25 @@ function hasNamingHeading( blocks ) {
 /**
  * Warns when the popup would be announced as the generic word "Popup".
  *
- * `Renderer::accessible_name()` resolves a name in three steps and the last
- * cannot fail, so this is never about an unnamed dialog. It is about the third
+ * `Renderer::accessible_name()` resolves a name in four steps and the last
+ * cannot fail, so this is never about an unnamed dialog. It is about the last
  * step: a popup with no heading and no title is announced as "Popup", which
  * tells a screen reader user that something opened and nothing about what.
  *
- * This check is deliberately stronger than the server's. `Renderer` matches the
- * first heading *tag* in rendered HTML and cannot read its text — reading it
- * back needs an API popkit's minimum WordPress does not have — so an empty
- * `<h2>` satisfies the server and produces an empty accessible name. The editor
- * has the block tree and can see the difference, and the renderer's own docblock
- * delegates the case here. That asymmetry is the reason this function exists
- * rather than mirroring the PHP.
+ * This check is deliberately stronger than the server's, and for a narrower
+ * reason than it once claimed. `Renderer`'s generated-`id` branch — the one that
+ * mints `popkit-title-{ID}` for a heading with no author anchor — matches the
+ * heading *tag* and never looks at its text, so an empty `<h2>` satisfies it and
+ * produces an empty accessible name. The editor holds the block tree and can see
+ * the difference, and the renderer's own docblock delegates the case here.
+ *
+ * What this comment used to say — that reading a heading's text back out needs
+ * an API popkit's minimum WordPress does not have — was simply false.
+ * `WP_HTML_Tag_Processor::next_token()`, `::get_token_type()` and
+ * `::get_modifiable_text()` are all `@since 6.5.0`, and the renderer now uses
+ * them for the anchored-heading branch. The empty-heading gap survives on the
+ * other branch by choice, not by capability: it costs a token walk on every
+ * popup to catch a case the editor already refuses to let an author save.
  *
  * @param {Object}        [subject]        Editor state.
  * @param {Array<Object>} [subject.blocks] Block tree of the popup content.
