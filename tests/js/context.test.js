@@ -62,7 +62,7 @@ const TIME_ORIGIN = 1766000000000;
  * A fixed tick rather than the real clock. `sentAt` and `receivedAt` are taken
  * two reads apart, and a real pair can come back equal on a coarse timer — the
  * assertion that one strictly precedes the other would then pass or fail by
- * luck rather than by behaviour.
+ * luck rather than by behavior.
  *
  * @type {number}
  */
@@ -102,8 +102,8 @@ let elapsedMs = 0;
 /**
  * Loads a fresh copy of the module under test.
  *
- * `context.js` memoises its single request in module scope. That is the
- * behaviour under test in one case and unwanted carry-over in every other, so
+ * `context.js` memoizes its single request in module scope. That is the
+ * behavior under test in one case and unwanted carry-over in every other, so
  * each test gets its own instance rather than a shared one somebody has to
  * remember to reset.
  *
@@ -211,7 +211,7 @@ describe( 'fetchContext -> unavailable', () => {
 		const { fetchContext } = await loadContext();
 		const clock = spyClock();
 
-		// What a captive portal, an HTML error page, or an over-eager optimiser
+		// What a captive portal, an HTML error page, or an over-eager optimizer
 		// produces: a 200 whose body will not parse.
 		window.fetch.mockResolvedValue( {
 			status: 200,

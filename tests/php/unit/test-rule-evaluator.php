@@ -465,7 +465,7 @@ final class Test_Popkit_Rule_Evaluator extends TestCase {
 
 		$this->assertFalse(
 			Rule_Evaluator::group_passes_server( $group, $this->values_evaluator() ),
-			'With a real evaluator this rule resolves false and fails its group. That is the behaviour Phase 4 restores.'
+			'With a real evaluator this rule resolves false and fails its group. That is the behavior Phase 4 restores.'
 		);
 
 		$this->assertTrue(

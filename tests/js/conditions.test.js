@@ -36,7 +36,7 @@
  * An evaluator is handed a rule's `values` and nothing else, so the rest of the
  * emitted rule — `type`, `negate`, and the `unknown` tag PHP sets on a type it
  * has no registration for — cannot reach one and does not appear below. That is
- * a real division of labour and not an omission, but it does mean **no test in
+ * a real division of labor and not an omission, but it does mean **no test in
  * this file can tell a working condition from one the client denies before its
  * evaluator is ever called**. Phase 4 shipped exactly that state: five modules
  * that passed every test here, and five missing PHP registrations that had the
@@ -280,7 +280,7 @@ function restoreEnvironment() {
 /**
  * Loads a fresh copy of the `visit_history` module.
  *
- * That module memoises its reading for the life of the pageview, deliberately —
+ * That module memoizes its reading for the life of the pageview, deliberately —
  * two popups on one page must agree about whether this visitor is new. A module
  * instance is therefore a pageview, and a test needing a *second* pageview needs
  * a second instance over the same storage.
@@ -337,7 +337,7 @@ describe( 'device', () => {
 		expect( window.matchMedia ).toHaveBeenCalledTimes( 1 );
 
 		/*
-		 * Whitespace is normalised, so `(max-width: 782px)` and
+		 * Whitespace is normalized, so `(max-width: 782px)` and
 		 * `(max-width:782px)` both pass and a reviewer reformatting the template
 		 * literal does not get a red build. Everything else is asserted exactly:
 		 * `min-width` instead of `max-width` inverts the condition,
@@ -759,7 +759,7 @@ describe( 'referrer -> unreadable rules', () => {
 		[ '', 'example.org/newsletter' ],
 		[ undefined, 'example.org/newsletter' ],
 		[ 'EXACT', 'example.org/newsletter' ],
-	] )( 'cannot answer for the unrecognised mode %s', ( match, value ) => {
+	] )( 'cannot answer for the unrecognized mode %s', ( match, value ) => {
 		/*
 		 * `regex` in particular. There is no fifth mode, and a stored rule
 		 * naming one must narrow the audience to nobody rather than be
@@ -841,7 +841,7 @@ describe( 'urlMatches -> the bundle has exactly one match language', () => {
 		( label, pattern, subject, units, expected ) => {
 			/*
 			 * The documented divergence from `Popkit\Url_Matcher`, pinned as
-			 * behaviour rather than left as a claim in a comment. PHP walks bytes
+			 * behavior rather than left as a claim in a comment. PHP walks bytes
 			 * and answers this table differently: `café` is 5 bytes there, so it
 			 * needs `caf??`, and `caf😀` is 7, so it needs `caf????`. Neither
 			 * engine's `?` is "one character" — see referrer.js -> Fidelity to
@@ -1125,7 +1125,7 @@ describe( 'visit_history', () => {
 		const visitHistory = await loadVisitHistory();
 
 		/*
-		 * The reading is memoised for the life of the pageview. Without that,
+		 * The reading is memoized for the life of the pageview. Without that,
 		 * the first `visit_history` rule evaluated would write the mark and the
 		 * second would read it back — so two popups on one page would disagree
 		 * about whether this visitor is new, and which one won would depend on
@@ -1212,7 +1212,7 @@ describe( 'visit_history', () => {
 		const visitHistory = await loadVisitHistory();
 
 		// Compared by name rather than derived from one boolean, so an
-		// unrecognised state is unreadable rather than silently `first_time`.
+		// unrecognized state is unreadable rather than silently `first_time`.
 		expect( visitHistory.evaluate( values ) ).toBeUndefined();
 	} );
 

@@ -46,7 +46,7 @@ defined( 'ABSPATH' ) || exit;
  * hook without a screen check loads a popup sidebar into somebody else's editor,
  * where it is visible, useless and reported as a bug against this plugin.
  * {@see Editor::is_popup_editor_screen()} is the gate, and it fails closed: an
- * unavailable or unrecognised screen enqueues nothing.
+ * unavailable or unrecognized screen enqueues nothing.
  *
  * ## A missing build is an error, not a quiet absence
  *
@@ -106,7 +106,7 @@ final class Editor {
 	 *
 	 * The same directory `Plugin::load_textdomain()` hands to
 	 * `load_plugin_textdomain()`, and the one named in the plugin header's
-	 * `Domain Path`. JSON catalogues for the editor bundle are built into it
+	 * `Domain Path`. JSON catalogs for the editor bundle are built into it
 	 * alongside the PHP ones.
 	 *
 	 * @since 0.1.0
@@ -157,7 +157,7 @@ final class Editor {
 	 * `@wordpress/dependency-extraction-webpack-plugin` rewrites every
 	 * `@wordpress/*` import to the matching `wp-*` global and records the script
 	 * handle it needs in that file. Hand-writing the list would leave a genuine
-	 * import unlisted — the module would still be externalised, the global would
+	 * import unlisted — the module would still be externalized, the global would
 	 * not be there yet, and the sidebar would fail with a reference error on a
 	 * screen where nothing else looked wrong.
 	 *

@@ -42,6 +42,7 @@ import {
 import { __ } from '@wordpress/i18n';
 
 import { FieldControl } from '../controls.js';
+import { labelOptions } from '../registry.js';
 
 /**
  * ISO 8601 weekdays, in the order they are shown.
@@ -49,7 +50,7 @@ import { FieldControl } from '../controls.js';
  * Monday is 1, matching `docs/data-model.md` and PHP's `N` format. Starting the
  * list at Monday rather than at the site's `start_of_week` is deliberate: the
  * stored numbers are ISO weekdays whatever the site's display preference, and a
- * reordered list would put a checkbox labelled "Sunday" first while storing 7.
+ * reordered list would put a checkbox labeled "Sunday" first while storing 7.
  *
  * @type {Array<{value: number, label: string}>}
  */
@@ -78,12 +79,13 @@ const DATE_SCHEMA = { type: 'string', control: 'date-time' };
 /**
  * The schedule panel body.
  *
- * @param {Object}   props          Props.
- * @param {Object}   props.schedule Stored schedule.
- * @param {Function} props.onChange Called with the updated schedule.
+ * @param {Object}   props            Props.
+ * @param {Object}   props.schedule   Stored schedule.
+ * @param {Function} props.onChange   Called with the updated schedule.
+ * @param {Object}   props.vocabulary Label maps from the registry.
  * @return {JSX.Element} Panel body.
  */
-export function SchedulePanel( { schedule, onChange } ) {
+export function SchedulePanel( { schedule, onChange, vocabulary } ) {
 	const recurrence = schedule?.recurrence ?? { days: [], windows: [] };
 	const days = Array.isArray( recurrence.days ) ? recurrence.days : [];
 	const windows = Array.isArray( recurrence.windows )
@@ -122,19 +124,7 @@ export function SchedulePanel( { schedule, onChange } ) {
 						__nextHasNoMarginBottom
 						label={ __( 'Whose clock decides', 'popkit' ) }
 						value={ schedule?.timezone ?? 'site' }
-						options={ [
-							{
-								label: __( 'The site’s timezone', 'popkit' ),
-								value: 'site',
-							},
-							{
-								label: __(
-									'The visitor’s own timezone',
-									'popkit'
-								),
-								value: 'visitor',
-							},
-						] }
+						options={ labelOptions( vocabulary?.timezones ) }
 						onChange={ ( timezone ) =>
 							onChange( { ...schedule, timezone } )
 						}

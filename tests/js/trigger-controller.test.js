@@ -267,7 +267,7 @@ function pageTransition( name, persisted ) {
 }
 
 /**
- * Dispatches a bubbling, cancellable click, as a visitor's would be.
+ * Dispatches a bubbling, cancelable click, as a visitor's would be.
  *
  * @param {Element} target Element to click.
  * @return {void}

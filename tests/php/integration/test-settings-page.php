@@ -140,7 +140,7 @@ final class Test_Popkit_Settings_Page extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	public function test_the_checkbox_is_labelled_and_describes_what_it_destroys() {
+	public function test_the_checkbox_is_labeled_and_describes_what_it_destroys() {
 		$html  = $this->render_as_administrator();
 		$field = $this->find_checkbox( $html );
 

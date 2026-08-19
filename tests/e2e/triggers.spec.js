@@ -272,7 +272,7 @@ const suppressPopups = async ( page, slugs ) => {
  * The moment is `performance.now()`, which counts from the document's creation
  * and is unaffected by the wall clock. A trigger's timer cannot start before the
  * document exists, so a reading below a configured delay is proof the delay was
- * not honoured — and one above it is not proof of much on its own, which is why
+ * not honored — and one above it is not proof of much on its own, which is why
  * the `page_load` test also measures a popup with no delay at all.
  */
 const watchOpens = async ( page ) => {

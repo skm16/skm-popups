@@ -107,7 +107,7 @@ final class Url_Matcher {
 	/**
 	 * Whether a mode identifier is one this matcher understands.
 	 *
-	 * Intended for save-time validation, where an unrecognised mode is an error
+	 * Intended for save-time validation, where an unrecognized mode is an error
 	 * an author can see and fix.
 	 *
 	 * @since 0.1.0
@@ -149,20 +149,20 @@ final class Url_Matcher {
 	 *   popup with no visible cause.
 	 * - `contains` with an empty value matches everything, for the same reason.
 	 * - `exact` with an empty value matches only an empty subject. Since
-	 *   {@see Url_Matcher::normalise_path()} never returns an empty string, an
-	 *   `exact` rule with an empty value never matches a normalised path.
+	 *   {@see Url_Matcher::normalize_path()} never returns an empty string, an
+	 *   `exact` rule with an empty value never matches a normalized path.
 	 * - `glob` with an empty pattern matches only an empty subject. An empty
 	 *   pattern is not an implicit `*`; an author who wants "any path" writes
 	 *   one.
 	 *
-	 * An unrecognised mode and an over-length value both return false rather
+	 * An unrecognized mode and an over-length value both return false rather
 	 * than throwing. Validation is the save-time gate; this is the runtime one.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param string $mode    One of `exact`, `prefix`, `contains`, `glob`.
 	 * @param string $value   Literal match value, at most MAX_VALUE_LENGTH bytes.
-	 * @param string $subject Subject to test, normally a normalised path.
+	 * @param string $subject Subject to test, normally a normalized path.
 	 * @return bool True when the subject matches.
 	 */
 	public static function matches( string $mode, string $value, string $subject ): bool {
@@ -191,7 +191,7 @@ final class Url_Matcher {
 	}
 
 	/**
-	 * Reduce a URL or path to the normalised path used for matching.
+	 * Reduce a URL or path to the normalized path used for matching.
 	 *
 	 * Steps, in this order:
 	 *
@@ -227,9 +227,9 @@ final class Url_Matcher {
 	 * @since 0.1.0
 	 *
 	 * @param string $url Absolute URL, path with query and fragment, or bare path.
-	 * @return string Normalised path, always beginning with a single slash.
+	 * @return string Normalized path, always beginning with a single slash.
 	 */
-	public static function normalise_path( string $url ): string {
+	public static function normalize_path( string $url ): string {
 		$path = self::strip_origin( $url );
 
 		/*
@@ -326,7 +326,7 @@ final class Url_Matcher {
 	 * @return string Path beginning with exactly one slash.
 	 */
 	private static function collapse_slashes( string $path ): string {
-		$normalised = '/';
+		$normalized = '/';
 		$length     = strlen( $path );
 
 		// True because the leading slash above has just been written.
@@ -345,10 +345,10 @@ final class Url_Matcher {
 				$previous_was_slash = false;
 			}
 
-			$normalised .= $character;
+			$normalized .= $character;
 		}
 
-		return $normalised;
+		return $normalized;
 	}
 
 	/**

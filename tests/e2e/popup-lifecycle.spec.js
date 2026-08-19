@@ -16,7 +16,7 @@
  * ## Seen is recorded on a successful open and on nothing else
  *
  * `docs/data-model.md` -> When a popup counts as seen is unusually specific about
- * this, because the mistake is invisible: a cancelled open shows the visitor
+ * this, because the mistake is invisible: a canceled open shows the visitor
  * nothing, so recording it spends their single impression on something they never
  * saw. The suppression test therefore asserts the *absence* of a storage record,
  * not merely the absence of a dialog.
@@ -26,7 +26,7 @@
  * The seeded `e2e-modal` fixture is emitted everywhere and cannot open in Phase
  * 2 — its stored `url_path` rule belongs to a condition nothing registers until
  * Phase 4, so it is marked `"unknown": true` and the client fails it closed. That
- * is correct behaviour and not a subject to test lifecycle against, so every
+ * is correct behavior and not a subject to test lifecycle against, so every
  * popup asserted here is created through `requestUtils` with an empty rule set
  * (`{ "groups": [] }`, which `docs/data-model.md` defines as "always match") and
  * deleted afterwards. The fixture is additionally suppressed through
@@ -229,7 +229,7 @@ test.describe( 'popkit popup lifecycle', () => {
 		subject = null;
 	} );
 
-	test( 'cancelling popkit:before-open suppresses the popup and records nothing', async ( {
+	test( 'canceling popkit:before-open suppresses the popup and records nothing', async ( {
 		page,
 	} ) => {
 		await recordEvents( page );
@@ -242,7 +242,7 @@ test.describe( 'popkit popup lifecycle', () => {
 		await expect( page.locator( rootFor( SPEC_SLUG ) ) ).toHaveCount( 1 );
 		await expect(
 			page.locator( openModalFor( SPEC_SLUG ) ),
-			'a cancelled open shows nothing'
+			'a canceled open shows nothing'
 		).toHaveCount( 0 );
 
 		const events = await page.evaluate( () => window.popkitEvents );

@@ -25,7 +25,7 @@ defined( 'ABSPATH' ) || exit;
  * browser by definition — a page load delay, a scroll depth, a click, a deep
  * link — and none of them may influence the cached markup. There is no
  * server-side trigger and none is planned, so making the context configurable
- * would only create a way to express something the pipeline cannot honour.
+ * would only create a way to express something the pipeline cannot honor.
  *
  * Triggers are also armed last, after the whole eligibility pipeline has passed
  * (see docs/CLAUDE.md -> Architecture invariants). Nothing binds to the DOM for
@@ -105,7 +105,7 @@ final class Trigger {
 				esc_html(
 					sprintf(
 						/* translators: %s: trigger key. */
-						__( 'The popkit trigger `%s` must declare a non-empty label. The editor has no other way to name it, and an unlabelled control is not accessible.', 'popkit' ),
+						__( 'The popkit trigger `%s` must declare a non-empty label. The editor has no other way to name it, and an unlabeled control is not accessible.', 'popkit' ),
 						$key
 					)
 				)

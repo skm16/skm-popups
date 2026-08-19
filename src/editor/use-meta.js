@@ -16,7 +16,7 @@
  * An earlier revision of this file carried its own copy of all five defaults.
  * It was wrong within the hour: `on_convert` was written as `'none'` where PHP
  * declares `'suppress_forever'`, which would have shown every author the
- * opposite of the behaviour they were about to save. That is the whole argument
+ * opposite of the behavior they were about to save. That is the whole argument
  * against the copy — not that it was hard to keep in step, but that when it
  * drifted nothing failed. The editor showed one value, the server stored
  * another, and both were internally consistent.

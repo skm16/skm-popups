@@ -3,11 +3,11 @@
  * WordPress function stubs for the popkit unit suite.
  *
  * The unit suite deliberately runs without WordPress, so the handful of core
- * functions that pure-logic classes touch are declared here instead. Behaviour
+ * functions that pure-logic classes touch are declared here instead. Behavior
  * is faithful enough that a logic test proves something real — sanitizers
  * actually sanitize, escapers actually escape — but these are stubs, not
  * reimplementations. Anything whose correctness depends on core's exact
- * behaviour belongs in the integration suite.
+ * behavior belongs in the integration suite.
  *
  * Every declaration is guarded, so loading this file inside a real WordPress
  * process is a no-op rather than a fatal redeclaration.
@@ -281,7 +281,7 @@ if ( ! class_exists( 'WP_Error', false ) ) {
 	 * Only the accessors those classes and their tests touch are implemented, and
 	 * they follow core's contract exactly — an empty `$code` means "the first
 	 * error registered", and `get_error_data()` returns null when nothing was
-	 * stored. Anything relying on core's richer behaviour (merging, removal,
+	 * stored. Anything relying on core's richer behavior (merging, removal,
 	 * WP_Error passed through filters) belongs in the integration suite.
 	 *
 	 * Parameters are deliberately untyped, matching core, so that a caller in a

@@ -27,7 +27,7 @@
  * papered over.
  *
  * The WordPress half is fully injectable and is driven properly below, including
- * the fail-closed behaviour when the version cannot be determined at all.
+ * the fail-closed behavior when the version cannot be determined at all.
  *
  * @package Popkit
  */

@@ -4,7 +4,7 @@
  * These four events are a supported extension point. Other plugins bind to
  * them, and the deferred form and donation integrations in `docs/build-plan.md`
  * are expected to be built entirely against this surface rather than against
- * popkit internals. Treat the names, the target, the bubbling behaviour, and
+ * popkit internals. Treat the names, the target, the bubbling behavior, and
  * the `detail` shape as a public contract: adding a field is safe, renaming or
  * removing one is a breaking change.
  *
@@ -23,7 +23,7 @@
  *         // event.detail is { id, slug }.
  *     } );
  *
- * Cancelling an open is `preventDefault()` on `popkit:before-open`:
+ * Canceling an open is `preventDefault()` on `popkit:before-open`:
  *
  *     document.addEventListener( 'popkit:before-open', ( event ) => {
  *         if ( 'newsletter' === event.detail.slug ) {
@@ -31,7 +31,7 @@
  *         }
  *     } );
  *
- * A cancelled open shows nothing and — because the popup was never seen —
+ * A canceled open shows nothing and — because the popup was never seen —
  * writes no frequency record. `docs/data-model.md` -> When a popup counts as
  * seen is the rule; `emitBeforeOpen()` returning `false` is how the controller
  * learns of it.
@@ -163,13 +163,13 @@ function dispatch( name, popup, cancelable, data ) {
 /**
  * Announces that a popup is about to open, and reports whether it may.
  *
- * The controller must honour a `false` return by opening nothing **and**
+ * The controller must honor a `false` return by opening nothing **and**
  * recording nothing: a suppressed popup was never seen, so consuming the
  * visitor's single impression on it would be wrong.
  *
  * @param {PopkitPopup|Element} popup Popup record, or the popup element.
  *
- * @return {boolean} `false` when a listener cancelled the open.
+ * @return {boolean} `false` when a listener canceled the open.
  */
 export function emitBeforeOpen( popup ) {
 	return dispatch( BEFORE_OPEN, popup, true );
@@ -201,7 +201,7 @@ export function emitClose( popup ) {
  *
  * popkit itself never detects a conversion in v1; integrations dispatch this
  * event, and the controller reacts to it by applying the popup's `on_convert`
- * frequency behaviour.
+ * frequency behavior.
  *
  * @param {PopkitPopup|Element} popup  Popup record, or the popup element.
  * @param {Object}              [data] Integration-supplied payload, exposed to

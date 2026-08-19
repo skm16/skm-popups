@@ -393,7 +393,7 @@ const routeState = async ( page ) => {
  * Logs the browser in through the real login form, landing on the host page.
  *
  * A real form login rather than an injected cookie, because the thing under test
- * is whether the context route recognises an ordinary WordPress session — the
+ * is whether the context route recognizes an ordinary WordPress session — the
  * failure `docs/CLAUDE.md` describes, where `is_user_logged_in()` reports
  * `logged_out` for everybody, is invisible to a fabricated one.
  */
@@ -577,7 +577,7 @@ test.describe( 'popkit server conditions', () => {
 		}
 	} );
 
-	test( 'url_path decides on the normalised path alone, in all four modes', async ( {
+	test( 'url_path decides on the normalized path alone, in all four modes', async ( {
 		request,
 		requestUtils,
 	} ) => {
@@ -933,7 +933,7 @@ test.describe( 'popkit client conditions', () => {
 
 			expect(
 				rule.type,
-				'and the rule travelled with it, for the client to decide'
+				'and the rule traveled with it, for the client to decide'
 			).toBe( 'device' );
 
 			/*
@@ -1337,7 +1337,7 @@ test.describe( 'popkit client conditions', () => {
 			 */
 			expect(
 				await routeState( page ),
-				'the context route recognises an ordinary WordPress session'
+				'the context route recognizes an ordinary WordPress session'
 			).toBe( 'logged_in' );
 
 			await expect(
@@ -1361,7 +1361,7 @@ test.describe( 'popkit client conditions', () => {
 			 * Cache safety, from the client's side: two visitors, one URL, two
 			 * different sessions, and the same emitted config to the byte. The
 			 * whole-document comparison lives in the PHPUnit integration suite,
-			 * where core's own `logged-in` body class can be normalised out.
+			 * where core's own `logged-in` body class can be normalized out.
 			 */
 			expect(
 				await configText( page ),

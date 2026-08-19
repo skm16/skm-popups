@@ -20,7 +20,7 @@
  * **A trigger has no context and no group.** Every trigger is armed in the
  * browser by definition, so there is no server-side trigger to express. That is
  * asserted as an absence in `to_schema()`: a `context` key appearing there would
- * be a way to describe a trigger the pipeline cannot honour.
+ * be a way to describe a trigger the pipeline cannot honor.
  *
  * Rejections assert the exception type *and* the message, for the reason set out
  * at the top of test-condition.php: a test that only proves something threw
@@ -656,7 +656,7 @@ final class Test_Popkit_Trigger extends TestCase {
 	 *
 	 * Every trigger is armed in the browser by definition. A context key here
 	 * would be a way to express a server-side trigger, which the pipeline cannot
-	 * honour and which would let a trigger influence cached markup.
+	 * honor and which would let a trigger influence cached markup.
 	 *
 	 * @return void
 	 */

@@ -51,7 +51,7 @@ defined( 'ABSPATH' ) || exit;
  * ```
  *
  * The filter's default is `null`, meaning "no opinion" — and when it is null this
- * class attaches nothing, so a site's own configuration is not merely honoured,
+ * class attaches nothing, so a site's own configuration is not merely honored,
  * it is untouched. Return a boolean only to override the site for popups.
  *
  * ## Three hooks, and why one is not enough
@@ -162,7 +162,7 @@ final class Editor_Mode {
 	 * overrules everything the per-post-type filter said.
 	 *
 	 * The Classic Editor plugin does exactly this, and by a route that is easy to
-	 * miss. It has a settings-aware callback, `choose_editor()`, which honours
+	 * miss. It has a settings-aware callback, `choose_editor()`, which honors
 	 * `classic_editor_enabled_editors_for_post_type` and would have let popups
 	 * through — but it only registers that callback when users are allowed to
 	 * switch editors. On its default configuration it instead hooks

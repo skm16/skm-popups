@@ -10,7 +10,7 @@
  *    gives popups their reputation.
  * 3. **Its teardown undoes what its `setup()` did.** Not "returns a function" —
  *    that the timer is cleared, the listener is gone, and the pending frame is
- *    cancelled, each asserted by trying to make the trigger fire afterwards.
+ *    canceled, each asserted by trying to make the trigger fire afterwards.
  *
  * ## Why these are unit tests rather than only end-to-end ones
  *
@@ -79,7 +79,7 @@ let spies = [];
 let teardowns = [];
 
 /**
- * Animation frames requested and not yet painted or cancelled.
+ * Animation frames requested and not yet painted or canceled.
  *
  * @type {Object[]}
  */
@@ -231,7 +231,7 @@ function restoreScroll() {
  *
  * jsdom paints nothing, so a frame is only ever requested and never run. The
  * stub hands out non-zero handles like a browser does — the trigger uses zero
- * as its "no frame pending" sentinel — and honours cancellation, which is what
+ * as its "no frame pending" sentinel — and honors cancelation, which is what
  * makes the teardown assertion meaningful.
  *
  * @return {void}
@@ -301,7 +301,7 @@ function render( tag, className, parent ) {
 }
 
 /**
- * Dispatches a bubbling, cancellable click, as a visitor's would be.
+ * Dispatches a bubbling, cancelable click, as a visitor's would be.
  *
  * @param {Element} target Element to click.
  * @return {Object} The dispatched event, for inspecting `defaultPrevented`.
@@ -349,7 +349,7 @@ function visit( url ) {
 afterEach( () => {
 	/*
 	 * Before the spies are restored, so that a teardown removing a listener or
-	 * cancelling a frame still goes through the same stubs its setup() did.
+	 * canceling a frame still goes through the same stubs its setup() did.
 	 * Every teardown here is called twice in the tests that also call it
 	 * themselves, which is the contract: teardown is idempotent.
 	 */
@@ -625,7 +625,7 @@ describe( 'scroll_depth', () => {
 		 * And the listener is gone from the DOM, which is the half nothing below
 		 * can see. The module's pending-frame handle is not reset by the
 		 * teardown, so a listener left bound asks for no further frames: every
-		 * behavioural assertion in this file would go on passing while a `scroll`
+		 * behavioral assertion in this file would go on passing while a `scroll`
 		 * handler outlived the popup on every page carrying one.
 		 */
 		expect( liveListeners( add, remove, 'scroll' ) ).toHaveLength( 0 );

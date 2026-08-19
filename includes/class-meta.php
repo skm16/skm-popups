@@ -46,7 +46,7 @@ defined( 'ABSPATH' ) || exit;
  * that keyword an unrecognized key fails the whole request; without it the key
  * passes validation untouched and the sanitizer discards it. Discarding is what
  * `docs/data-model.md` -> Display specifies for a stored `close_button`, and it
- * is the kinder behaviour for every other stray key too.
+ * is the kinder behavior for every other stray key too.
  *
  * The one place values are passed through unexamined is a rule's `values` for an
  * unregistered condition type, which must survive a deactivate/reactivate cycle
@@ -56,7 +56,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * ## Which way sanitization fails
  *
- * Where a submitted value cannot be honoured, the replacement is chosen so it
+ * Where a submitted value cannot be honored, the replacement is chosen so it
  * cannot widen who sees the popup:
  *
  * - A trigger that cannot be sanitized is dropped. Fewer triggers means fewer
@@ -150,7 +150,7 @@ final class Meta {
 	 *
 	 * `until_dismissed` and `until_converted` were removed from the data model
 	 * before v1 shipped and must not come back: the first named three different
-	 * behaviours at once, and the second is `once_ever` with extra steps.
+	 * behaviors at once, and the second is `once_ever` with extra steps.
 	 *
 	 * @since 0.1.0
 	 * @var string[]
@@ -161,7 +161,7 @@ final class Meta {
 	 * Permitted values for `frequency.on_convert`.
 	 *
 	 * This replaced `reset_on_convert`, whose name described the inverse of the
-	 * useful behaviour — it would have made a visitor who just converted eligible
+	 * useful behavior — it would have made a visitor who just converted eligible
 	 * again immediately.
 	 *
 	 * @since 0.1.0
@@ -196,7 +196,7 @@ final class Meta {
 	/**
 	 * Permitted values for `display.position`, per layout.
 	 *
-	 * A banner has no centre and a modal has no bottom, so the permitted values
+	 * A banner has no center and a modal has no bottom, so the permitted values
 	 * differ by layout. The first entry of each list is that layout's default and
 	 * the value a position from the other layout falls back to.
 	 *
@@ -220,9 +220,9 @@ final class Meta {
 	public const DISPLAY_ANIMATIONS = array( 'none', 'fade', 'slide' );
 
 	/**
-	 * Colour fields an author may override on a per-popup basis.
+	 * Color fields an author may override on a per-popup basis.
 	 *
-	 * Each holds a hex colour or an empty string, and empty means "whatever the
+	 * Each holds a hex color or an empty string, and empty means "whatever the
 	 * chosen theme says". That is the only representation of *unset* here, which
 	 * is why these are strings rather than a nested object with its own presence
 	 * flag: an empty string cannot be confused with black, and the sanitizer can
@@ -230,7 +230,7 @@ final class Meta {
 	 *
 	 * They are validated with `sanitize_hex_color()` and nothing else. These
 	 * values are printed into a `style` attribute, so accepting the full CSS
-	 * colour grammar would mean accepting a string that can close a declaration
+	 * color grammar would mean accepting a string that can close a declaration
 	 * and open another one. A hex triplet cannot.
 	 *
 	 * @since 0.1.0
@@ -244,7 +244,7 @@ final class Meta {
 	);
 
 	/**
-	 * Permitted values for the non-colour appearance overrides.
+	 * Permitted values for the non-color appearance overrides.
 	 *
 	 * Scales rather than numbers, and that is deliberate in two ways.
 	 *
@@ -606,7 +606,7 @@ final class Meta {
 	 *   Returning non-null does genuinely short-circuit `update_metadata()` before
 	 *   it touches the database. But `wp-includes/meta.php` fires that filter
 	 *   *after* `sanitize_meta()`, so the value it receives has already been
-	 *   normalised: the offending rule is by then the fail-closed marker and the
+	 *   normalized: the offending rule is by then the fail-closed marker and the
 	 *   limit that was hit is gone. It also carries no message —
 	 *   `WP_REST_Meta_Fields::update_meta_value()` turns a `false` into
 	 *   `rest_meta_database_error`, an HTTP 500 saying only that the database
@@ -769,7 +769,7 @@ final class Meta {
 	}
 
 	/**
-	 * Default display: a centred modal that inherits the theme.
+	 * Default display: a centered modal that inherits the theme.
 	 *
 	 * @since 0.1.0
 	 *
@@ -787,7 +787,7 @@ final class Meta {
 		);
 
 		// Every override defaults to "leave the theme alone", so a popup created
-		// before customisation existed and a popup created after it look identical.
+		// before customization existed and a popup created after it look identical.
 		foreach ( self::DISPLAY_COLOR_FIELDS as $field ) {
 			$defaults[ $field ] = '';
 		}
@@ -1055,7 +1055,7 @@ final class Meta {
 		foreach ( self::DISPLAY_COLOR_FIELDS as $field ) {
 			$properties[ $field ] = array(
 				'type'        => 'string',
-				'description' => __( 'Hex colour overriding the chosen theme, or an empty string to keep it.', 'popkit' ),
+				'description' => __( 'Hex color overriding the chosen theme, or an empty string to keep it.', 'popkit' ),
 				'default'     => '',
 				'maxLength'   => 7,
 			);
@@ -1094,7 +1094,7 @@ final class Meta {
 				),
 				'position'               => array(
 					'type'        => 'string',
-					'description' => __( 'Where the popup sits. A modal is centred or at the top; a banner is at the top or the bottom.', 'popkit' ),
+					'description' => __( 'Where the popup sits. A modal is centered or at the top; a banner is at the top or the bottom.', 'popkit' ),
 					'enum'        => self::display_positions(),
 					'default'     => 'center',
 				),
@@ -1259,7 +1259,7 @@ final class Meta {
 		);
 
 		/*
-		 * The colour overrides go through sanitize_color() rather than through
+		 * The color overrides go through sanitize_color() rather than through
 		 * field_value(), because a `string` field's sanitizer only bounds length
 		 * and strips tags — neither of which stops `#fff;position:fixed` from
 		 * reaching a style attribute intact.
@@ -1421,22 +1421,22 @@ final class Meta {
 	}
 
 	/**
-	 * Reduces a submitted colour to a hex triplet, or to nothing.
+	 * Reduces a submitted color to a hex triplet, or to nothing.
 	 *
 	 * `sanitize_hex_color()` returns null for anything that is not `#rgb` or
 	 * `#rrggbb`, and null becomes an empty string here — which the renderer reads
-	 * as "use the theme". A rejected colour therefore falls back to a value that
+	 * as "use the theme". A rejected color therefore falls back to a value that
 	 * is known to meet the contrast the shipped themes were measured for, rather
 	 * than to a partially-parsed string.
 	 *
-	 * This is the whole of the defence for these four fields. They are printed
+	 * This is the whole of the defense for these four fields. They are printed
 	 * into a `style` attribute, so a value that could contain `;` or `)` could
 	 * close the declaration it sits in and start another one.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param mixed $raw Submitted colour.
-	 * @return string Hex colour, or an empty string.
+	 * @param mixed $raw Submitted color.
+	 * @return string Hex color, or an empty string.
 	 */
 	private static function sanitize_color( mixed $raw ): string {
 		if ( ! is_string( $raw ) || '' === trim( $raw ) ) {

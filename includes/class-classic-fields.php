@@ -44,6 +44,20 @@ defined( 'ABSPATH' ) || exit;
  * selects populated from `get_post_types()` and `get_taxonomies()` — cheaper and
  * more reliable server-side than the round trip the block editor has to make.
  *
+ * ## Two schema keys this renders that a registration cannot declare
+ *
+ * `description` prints help text beneath the control and wires it up with
+ * `aria-describedby`. It is used by the hand-built schemas in
+ * {@see Classic_Editor}, and {@see Condition} deliberately rejects it in a
+ * registration: help text belongs to both editors or to neither, and the block
+ * editor has no equivalent yet. A registration that tries it fails loudly at
+ * registration time rather than silently rendering nothing.
+ *
+ * `enum_labels` is the opposite — a registration is exactly who should declare
+ * it, and {@see Condition::validate_enum_labels()} checks that it covers the
+ * enum. Without it a select's options are the stored tokens themselves, which is
+ * what every enum looked like before labels existed and is still the fallback.
+ *
  * ## Escaping
  *
  * Everything printed here is escaped at the point of output. Field schemas come
@@ -63,7 +77,7 @@ final class Classic_Fields {
 	private function __construct() {}
 
 	/**
-	 * Renders one field as a labelled form control.
+	 * Renders one field as a labeled form control.
 	 *
 	 * @since 0.1.0
 	 *
@@ -74,14 +88,27 @@ final class Classic_Fields {
 	 * @return void
 	 */
 	public static function render( string $name, string $id, array $schema, $value = null ): void {
-		$control = isset( $schema['control'] ) ? (string) $schema['control'] : 'text';
-		$label   = isset( $schema['label'] ) ? (string) $schema['label'] : $name;
+		$control     = isset( $schema['control'] ) ? (string) $schema['control'] : 'text';
+		$label       = isset( $schema['label'] ) ? (string) $schema['label'] : $name;
+		$description = isset( $schema['description'] ) ? (string) $schema['description'] : '';
+		$described   = '' === $description ? '' : $id . '-description';
 
 		if ( null === $value && array_key_exists( 'default', $schema ) ) {
 			$value = $schema['default'];
 		}
 
-		echo '<p class="popkit-field popkit-field--' . esc_attr( $control ) . '">';
+		/*
+		 * A color field is wrapped in a div rather than a paragraph, because the
+		 * WordPress color picker wraps its input in a `.wp-picker-container` div
+		 * at runtime. The DOM permits that inside a `<p>` — nothing re-parses the
+		 * markup, so the parser's "a paragraph closes at a block element" rule
+		 * never gets a say — but it leaves the live tree in a shape the same
+		 * markup could not have been parsed into, which is the kind of detail that
+		 * breaks something years later for reasons nobody can reconstruct.
+		 */
+		$wrapper = 'color' === $control ? 'div' : 'p';
+
+		echo '<' . esc_html( $wrapper ) . ' class="popkit-field popkit-field--' . esc_attr( $control ) . '">';
 
 		// A toggle labels itself, because the checkbox belongs inside its label.
 		if ( 'toggle' !== $control ) {
@@ -90,11 +117,11 @@ final class Classic_Fields {
 
 		switch ( $control ) {
 			case 'toggle':
-				self::toggle( $name, $id, $label, $value );
+				self::toggle( $name, $id, $label, $value, $described );
 				break;
 
 			case 'select':
-				self::select( $name, $id, $schema, $value, false );
+				self::select( $name, $id, $schema, $value, false, $described );
 				break;
 
 			case 'multiselect':
@@ -102,30 +129,38 @@ final class Classic_Fields {
 				break;
 
 			case 'post-type-select':
-				self::options_select( $name, $id, self::post_type_options(), $value, self::is_array_field( $schema ) );
+				self::options_select( $name, $id, self::post_type_options(), $value, self::is_array_field( $schema ), $described );
 				break;
 
 			case 'taxonomy-select':
-				self::options_select( $name, $id, self::taxonomy_options(), $value, self::is_array_field( $schema ) );
+				self::options_select( $name, $id, self::taxonomy_options(), $value, self::is_array_field( $schema ), $described );
 				break;
 
 			case 'number':
 			case 'range':
-				self::number( $name, $id, $schema, $value, 'range' === $control );
+				self::number( $name, $id, $schema, $value, 'range' === $control, $described );
 				break;
 
 			case 'date-time':
-				self::input( 'datetime-local', $name, $id, $schema, $value );
+				self::input( 'datetime-local', $name, $id, $schema, $value, $described );
+				break;
+
+			case 'color':
+				self::color( $name, $id, $label, $value, $described );
 				break;
 
 			case 'url-match':
 			case 'text':
 			default:
-				self::input( 'text', $name, $id, $schema, $value );
+				self::input( 'text', $name, $id, $schema, $value, $described );
 				break;
 		}
 
-		echo '</p>';
+		if ( '' !== $description ) {
+			echo '<span class="description" id="' . esc_attr( $described ) . '">' . esc_html( $description ) . '</span>';
+		}
+
+		echo '</' . esc_html( $wrapper ) . '>';
 	}
 
 	/**
@@ -249,13 +284,14 @@ final class Classic_Fields {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $name  Name attribute.
-	 * @param string $id    DOM id.
-	 * @param string $label Label text.
-	 * @param mixed  $value Stored value.
+	 * @param string $name      Name attribute.
+	 * @param string $id        DOM id.
+	 * @param string $label     Label text.
+	 * @param mixed  $value     Stored value.
+	 * @param string $described DOM id of the description, or an empty string.
 	 * @return void
 	 */
-	private static function toggle( string $name, string $id, string $label, $value ): void {
+	private static function toggle( string $name, string $id, string $label, $value, string $described = '' ): void {
 		/*
 		 * The hidden companion is what makes unticking mean "off": an unchecked
 		 * box posts nothing, so without it an absent key would be indistinguishable
@@ -263,7 +299,9 @@ final class Classic_Fields {
 		 */
 		echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="0" />';
 		echo '<label for="' . esc_attr( $id ) . '">';
-		echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1" ' . checked( (bool) $value, true, false ) . ' /> ';
+		echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1" ' . checked( (bool) $value, true, false );
+		self::describedby( $described );
+		echo ' /> ';
 		echo esc_html( $label );
 		echo '</label>';
 	}
@@ -271,23 +309,87 @@ final class Classic_Fields {
 	/**
 	 * Renders a select built from the schema's `enum`.
 	 *
+	 * The option text comes from the schema's `enum_labels` when it declares one,
+	 * and from the stored value itself when it does not. That fallback is what
+	 * every enum did before labels existed, and it is why a third-party condition
+	 * that has not declared any still renders a usable control rather than a
+	 * column of blanks.
+	 *
 	 * @since 0.1.0
 	 *
-	 * @param string               $name     Name attribute.
-	 * @param string               $id       DOM id.
-	 * @param array<string, mixed> $schema   Field schema.
-	 * @param mixed                $value    Stored value.
-	 * @param bool                 $multiple Whether several values may be chosen.
+	 * @param string               $name      Name attribute.
+	 * @param string               $id        DOM id.
+	 * @param array<string, mixed> $schema    Field schema.
+	 * @param mixed                $value     Stored value.
+	 * @param bool                 $multiple  Whether several values may be chosen.
+	 * @param string               $described DOM id of the description, or an empty string.
 	 * @return void
 	 */
-	private static function select( string $name, string $id, array $schema, $value, bool $multiple ): void {
+	private static function select( string $name, string $id, array $schema, $value, bool $multiple, string $described = '' ): void {
+		$labels  = isset( $schema['enum_labels'] ) && is_array( $schema['enum_labels'] ) ? $schema['enum_labels'] : array();
 		$options = array();
 
 		foreach ( (array) ( $schema['enum'] ?? array() ) as $choice ) {
-			$options[ (string) $choice ] = (string) $choice;
+			$options[ (string) $choice ] = Vocabulary::label( $labels, is_scalar( $choice ) ? $choice : '' );
 		}
 
-		self::options_select( $name, $id, $options, $value, $multiple );
+		self::options_select( $name, $id, $options, $value, $multiple, $described );
+	}
+
+	/**
+	 * Renders a color field as a text input the color picker upgrades.
+	 *
+	 * A text input holding a hex value is the whole control when JavaScript does
+	 * not run, and `dist/classic.js` turns it into a WordPress color picker when
+	 * it does. Both states submit the same value from the same field, so the
+	 * picker is an enhancement rather than the interface.
+	 *
+	 * `type="text"` rather than `type="color"`, and that is the load-bearing
+	 * detail. A native color input has no empty state — it reports `#000000`
+	 * before anybody has picked anything — so an author who opened it and changed
+	 * their mind would have silently set the popup's text to black. Blank has to
+	 * stay expressible, because blank is what "keep the theme" means, and the
+	 * theme is the pair whose contrast has actually been measured. WordPress's own
+	 * picker keeps blank reachable through its Clear button; see
+	 * `src/classic/index.js`.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @param string $name      Name attribute.
+	 * @param string $id        DOM id.
+	 * @param string $label     Label text, reused to name the picker's button.
+	 * @param mixed  $value     Stored value.
+	 * @param string $described DOM id of the description, or an empty string.
+	 * @return void
+	 */
+	private static function color( string $name, string $id, string $label, $value, string $described = '' ): void {
+		echo '<input type="text" class="popkit-color" id="' . esc_attr( $id ) . '"';
+		echo ' name="' . esc_attr( $name ) . '" value="' . esc_attr( is_scalar( $value ) ? (string) $value : '' ) . '"';
+		echo ' maxlength="7" data-popkit-color';
+		echo ' data-popkit-color-label="' . esc_attr( $label ) . '"';
+		self::describedby( $described );
+		echo ' />';
+	}
+
+	/**
+	 * Prints an `aria-describedby` attribute, or nothing.
+	 *
+	 * Echoes rather than returning markup so the escaping happens at the point of
+	 * output, where the sniffs can see it. A helper returning an escaped fragment
+	 * for a caller to `echo` reads the same and is exactly the shape that hides an
+	 * unescaped value from review.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @param string $described DOM id of the description, or an empty string.
+	 * @return void
+	 */
+	private static function describedby( string $described ): void {
+		if ( '' === $described ) {
+			return;
+		}
+
+		echo ' aria-describedby="' . esc_attr( $described ) . '"';
 	}
 
 	/**
@@ -326,18 +428,20 @@ final class Classic_Fields {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string                $name     Name attribute.
-	 * @param string                $id       DOM id.
-	 * @param array<string, string> $options  Value => label.
-	 * @param mixed                 $value    Stored value.
-	 * @param bool                  $multiple Whether several values may be chosen.
+	 * @param string                $name      Name attribute.
+	 * @param string                $id        DOM id.
+	 * @param array<string, string> $options   Value => label.
+	 * @param mixed                 $value     Stored value.
+	 * @param bool                  $multiple  Whether several values may be chosen.
+	 * @param string                $described DOM id of the description, or an empty string.
 	 * @return void
 	 */
-	private static function options_select( string $name, string $id, array $options, $value, bool $multiple ): void {
+	private static function options_select( string $name, string $id, array $options, $value, bool $multiple, string $described = '' ): void {
 		$selected = is_array( $value ) ? array_map( 'strval', $value ) : array( (string) $value );
 
 		echo '<select id="' . esc_attr( $id ) . '" name="' . esc_attr( $multiple ? $name . '[]' : $name ) . '"';
 		echo $multiple ? ' multiple size="4"' : '';
+		self::describedby( $described );
 		echo '>';
 
 		if ( ! $multiple ) {
@@ -354,20 +458,22 @@ final class Classic_Fields {
 	}
 
 	/**
-	 * Renders a number or range input, honouring declared bounds.
+	 * Renders a number or range input, honoring declared bounds.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string               $name   Name attribute.
-	 * @param string               $id     DOM id.
-	 * @param array<string, mixed> $schema Field schema.
-	 * @param mixed                $value  Stored value.
-	 * @param bool                 $range  Whether to render a slider.
+	 * @param string               $name      Name attribute.
+	 * @param string               $id        DOM id.
+	 * @param array<string, mixed> $schema    Field schema.
+	 * @param mixed                $value     Stored value.
+	 * @param bool                 $range     Whether to render a slider.
+	 * @param string               $described DOM id of the description, or an empty string.
 	 * @return void
 	 */
-	private static function number( string $name, string $id, array $schema, $value, bool $range ): void {
+	private static function number( string $name, string $id, array $schema, $value, bool $range, string $described = '' ): void {
 		echo '<input type="' . ( $range ? 'range' : 'number' ) . '" id="' . esc_attr( $id ) . '"';
 		echo ' name="' . esc_attr( $name ) . '" value="' . esc_attr( (string) $value ) . '"';
+		self::describedby( $described );
 
 		if ( isset( $schema['min'] ) ) {
 			echo ' min="' . esc_attr( (string) $schema['min'] ) . '"';
@@ -389,16 +495,18 @@ final class Classic_Fields {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string               $type   Input type attribute.
-	 * @param string               $name   Name attribute.
-	 * @param string               $id     DOM id.
-	 * @param array<string, mixed> $schema Field schema.
-	 * @param mixed                $value  Stored value.
+	 * @param string               $type      Input type attribute.
+	 * @param string               $name      Name attribute.
+	 * @param string               $id        DOM id.
+	 * @param array<string, mixed> $schema    Field schema.
+	 * @param mixed                $value     Stored value.
+	 * @param string               $described DOM id of the description, or an empty string.
 	 * @return void
 	 */
-	private static function input( string $type, string $name, string $id, array $schema, $value ): void {
+	private static function input( string $type, string $name, string $id, array $schema, $value, string $described = '' ): void {
 		echo '<input type="' . esc_attr( $type ) . '" class="regular-text" id="' . esc_attr( $id ) . '"';
 		echo ' name="' . esc_attr( $name ) . '" value="' . esc_attr( is_scalar( $value ) ? (string) $value : '' ) . '"';
+		self::describedby( $described );
 
 		if ( isset( $schema['max_length'] ) ) {
 			echo ' maxlength="' . esc_attr( (string) (int) $schema['max_length'] ) . '"';

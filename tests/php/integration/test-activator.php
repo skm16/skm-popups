@@ -159,7 +159,7 @@ final class Test_Popkit_Activator extends WP_UnitTestCase {
 		$this->assertSame(
 			$first_option,
 			$second_option,
-			'A second activation rewrote the stored roles option. The capability sets may still match, which is exactly how a routine that strips and re-adds capabilities hides: any role a site owner customised is silently rebuilt on every plugin update.'
+			'A second activation rewrote the stored roles option. The capability sets may still match, which is exactly how a routine that strips and re-adds capabilities hides: any role a site owner customized is silently rebuilt on every plugin update.'
 		);
 
 		$this->assertSame(

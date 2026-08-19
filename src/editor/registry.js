@@ -10,7 +10,7 @@
  * ## One fetch per page load, shared by every panel
  *
  * Four panels want the registry and it does not change while the editor is open.
- * The promise is memoised at module scope rather than per component, so mounting
+ * The promise is memoized at module scope rather than per component, so mounting
  * the sidebar makes one request no matter how many panels read from it — and a
  * panel that mounts later attaches to the same promise instead of starting a
  * second round trip.
@@ -74,7 +74,7 @@ export function clearRegistryCache() {
 /**
  * Subscribes a component to the registry.
  *
- * The `cancelled` flag is not ceremony. An author who opens the popup editor and
+ * The `canceled` flag is not ceremony. An author who opens the popup editor and
  * navigates away before the response lands would otherwise have `setState`
  * called on an unmounted component, and React reports that as a warning naming
  * this file rather than the navigation that caused it.
@@ -89,23 +89,23 @@ export function useRegistry() {
 	} );
 
 	useEffect( () => {
-		let cancelled = false;
+		let canceled = false;
 
 		fetchRegistry().then(
 			( registry ) => {
-				if ( ! cancelled ) {
+				if ( ! canceled ) {
 					setState( { registry, isLoading: false, error: null } );
 				}
 			},
 			( error ) => {
-				if ( ! cancelled ) {
+				if ( ! canceled ) {
 					setState( { registry: null, isLoading: false, error } );
 				}
 			}
 		);
 
 		return () => {
-			cancelled = true;
+			canceled = true;
 		};
 	}, [] );
 
@@ -138,6 +138,40 @@ export function conditionsByGroup( registry ) {
 	return [ ...grouped.entries() ].map( ( [ group, conditions ] ) => ( {
 		group,
 		conditions,
+	} ) );
+}
+
+/**
+ * Turns one of the registry's label maps into `SelectControl` options.
+ *
+ * The maps come from `Popkit\Vocabulary`, which is where both the permitted
+ * values and the order they are offered in are decided. Key order survives the
+ * trip: PHP writes them in order, `wp_json_encode` preserves it, and JavaScript
+ * enumerates string keys in insertion order — so a select rendered from this
+ * lists its options exactly as the PHP constant declares them, without either
+ * side restating the order.
+ *
+ * That guarantee is specific to keys that are not integer-like. Every popkit
+ * vocabulary is keyed by a snake_case token, so none of them are; a map keyed by
+ * numbers would come back sorted numerically instead, which is why weekdays are
+ * a list in `schedule.js` rather than a map here.
+ *
+ * An absent map yields no options rather than throwing. A registry served by an
+ * older popkit than this bundle is the case that produces one, and a select with
+ * nothing in it is recoverable — the stored value is untouched and reappears the
+ * moment the two agree again.
+ *
+ * @param {Object} [map] Value => label.
+ * @return {Array<{label: string, value: string}>} Select options.
+ */
+export function labelOptions( map ) {
+	if ( ! map || 'object' !== typeof map ) {
+		return [];
+	}
+
+	return Object.entries( map ).map( ( [ value, label ] ) => ( {
+		value,
+		label: String( label ),
 	} ) );
 }
 

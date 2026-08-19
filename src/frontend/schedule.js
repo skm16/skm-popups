@@ -69,10 +69,10 @@ const MS_PER_MINUTE = 60000;
  *
  * ECMAScript parses a date-time carrying no `Z` and no numeric offset as
  * *local* time, so such a value would resolve to a different instant for every
- * visitor — exactly the visitor-varying behaviour the constitution exists to
+ * visitor — exactly the visitor-varying behavior the constitution exists to
  * prevent. `data-model.md` declares `start` and `end` to be UTC and the PHP
  * side stores them as `Y-m-d\TH:i:s\Z`, so a missing designator can only be an
- * emitter slip; normalising is preferable to rejecting, because silently
+ * emitter slip; normalizing is preferable to rejecting, because silently
  * killing a live campaign over a punctuation difference is the worse failure.
  *
  * A date-only value such as `2026-11-30` already parses as UTC and is returned
@@ -298,7 +298,7 @@ function warnUnusableZone( value ) {
  * the correct readings of "09:00 local".
  *
  * The weekday is derived from the formatted calendar date rather than from a
- * localised weekday name, so no assumption is made about how any locale spells
+ * localized weekday name, so no assumption is made about how any locale spells
  * `Mon`. `hourCycle: 'h23'` keeps midnight at hour 0; the modulo is a cheap
  * guard against older engines that report hour 24 instead.
  *
@@ -335,7 +335,7 @@ function localParts( nowMs, timeZone ) {
 			minute: '2-digit',
 		} ).formatToParts( new Date( nowMs ) );
 	} catch {
-		// An unrecognised zone identifier throws a RangeError. There is no
+		// An unrecognized zone identifier throws a RangeError. There is no
 		// honest fallback: guessing UTC would run the campaign at the wrong
 		// hour, so the schedule fails closed with the caller — loudly, because
 		// nothing else on the page would show that it had.
@@ -464,7 +464,7 @@ function windowMatches( entry, local, days ) {
  * empty list of either imposes no narrowing: `days: []` already means every day
  * by the same reading, as `data-model.md` -> Schedule states in as many words.
  *
- * The PHP sanitiser agrees and is built around it — it preserves a zero-length
+ * The PHP sanitizer agrees and is built around it — it preserves a zero-length
  * window rather than dropping it, precisely so that "no windows" cannot be
  * reached by accident from "one window the author has not finished typing".
  *

@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Declares the built-in triggers and hands them to the trigger registry.
  *
- * This class holds schema only. A trigger has no server-side behaviour at all —
+ * This class holds schema only. A trigger has no server-side behavior at all —
  * arming, first-fire-wins and teardown are entirely a front-end concern, and the
  * runtime keys off the same string this file registers. What lives here is the
  * declaration that lets the block editor render a working control for each

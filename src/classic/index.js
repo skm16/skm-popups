@@ -1,5 +1,5 @@
 /**
- * Repeater behaviour for the classic-editor targeting meta box.
+ * Repeater behavior for the classic-editor targeting meta box.
  *
  * Everything this file does is *additive*. The markup PHP renders is a complete,
  * working form on its own: every control that exists is submitted, and a popup
@@ -132,7 +132,7 @@ function syncRuleFields( rule ) {
 /**
  * Offers only the positions the chosen layout can express.
  *
- * A modal is centred or near the top; a notification bar is at the top, at the
+ * A modal is centered or near the top; a notification bar is at the top, at the
  * bottom, or a lower third. The server renders both groups and disables the one
  * that does not apply, so this only has to keep that in step as the layout
  * changes.
@@ -176,6 +176,77 @@ function syncPositions( doc, layout ) {
 	if ( fallback && chosen && chosen.parentElement.disabled ) {
 		fallback.selected = true;
 	}
+}
+
+/**
+ * Shows or hides the targeting rules to match the site-wide choice.
+ *
+ * The rules are hidden, never removed. `Classic_Editor::read_conditions()`
+ * answers the scope question first and returns an empty rule set without reading
+ * them, so a hidden rule cannot leak into a site-wide popup — and an author who
+ * flips to "everywhere", changes their mind, and flips back before saving finds
+ * their rules exactly as they left them.
+ *
+ * `hidden` rather than a class, for the same reason `syncRuleFields` uses it: it
+ * takes the controls out of the tab order as well as out of sight.
+ *
+ * @param {Document} doc Owning document.
+ * @return {void}
+ */
+function syncScope( doc ) {
+	const chosen = doc.querySelector( '[data-popkit-scope]:checked' );
+	const scoped = doc.querySelector( '[data-popkit-scoped]' );
+
+	if ( ! chosen || ! scoped ) {
+		return;
+	}
+
+	const scoping = 'rules' === chosen.value;
+
+	scoped.hidden = ! scoping;
+
+	// Choosing to target something and being shown an empty box is a dead end —
+	// the author has to find "Add group" before there is anything to fill in. One
+	// group with one rule is the smallest thing that can be edited rather than
+	// constructed, and removing it is one click if it was not wanted.
+	if ( scoping && ! scoped.querySelector( '[data-popkit-group]' ) ) {
+		addGroup( doc );
+	}
+}
+
+/**
+ * Turns the color inputs into WordPress color pickers.
+ *
+ * Iris ships with core and is pulled in as a dependency of this handle, so there
+ * is nothing to load here — but it is still called defensively. The picker is an
+ * enhancement over a text input that already works: a site that has dequeued
+ * `wp-color-picker`, or a jQuery that failed to load, leaves the author typing a
+ * hex value into a field that submits exactly the same name, rather than facing
+ * a console error and a control that does nothing.
+ *
+ * `defaultColor: false` is the load-bearing option. It swaps Iris's "Default"
+ * button for a **Clear** one, which empties the input rather than restoring some
+ * color — and an empty value is how a popup says "keep the theme", which is the
+ * only value in this control whose contrast has actually been measured. With a
+ * default set there would be no way back to blank once the picker was opened.
+ *
+ * @param {Document} doc Owning document.
+ * @return {void}
+ */
+function upgradeColorFields( doc ) {
+	const jq = window.jQuery;
+
+	if ( ! jq || ! jq.fn || 'function' !== typeof jq.fn.wpColorPicker ) {
+		return;
+	}
+
+	doc.querySelectorAll( '[data-popkit-color]' ).forEach( ( input ) => {
+		jq( input ).wpColorPicker( {
+			defaultColor: false,
+			hide: true,
+			palettes: true,
+		} );
+	} );
 }
 
 /**
@@ -353,6 +424,12 @@ function onChange( event ) {
 		return;
 	}
 
+	if ( target.matches( '[data-popkit-scope]' ) ) {
+		syncScope( target.ownerDocument );
+
+		return;
+	}
+
 	if ( target.matches( '[name="popkit_display[layout]"]' ) ) {
 		syncPositions( target.ownerDocument, target.value );
 	}
@@ -370,6 +447,8 @@ function start() {
 	document
 		.querySelectorAll( '[data-popkit-rule]' )
 		.forEach( ( rule ) => syncRuleFields( rule ) );
+
+	upgradeColorFields( document );
 }
 
 if ( 'loading' === document.readyState ) {

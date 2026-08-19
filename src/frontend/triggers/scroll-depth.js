@@ -11,7 +11,7 @@
  * element, which is the document's full height less the one viewport that is
  * always on screen. Progress is `scrollTop` as a percentage of that, so 100
  * means the bottom of the document has been reached — not that the visitor has
- * travelled the document's whole height, which no visitor can do.
+ * traveled the document's whole height, which no visitor can do.
  *
  * ## A page that does not scroll counts as fully read
  *

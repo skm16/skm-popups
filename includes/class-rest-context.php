@@ -177,7 +177,7 @@ final class Rest_Context {
 	 * attacking page, and `steal()` receives the login state. **Script tags are
 	 * not subject to CORS**, so declining to send `Access-Control-Allow-Origin`
 	 * — which this class also does — prevents `fetch()` but does nothing here.
-	 * Same-origin policy is not a defence against a transport that was designed
+	 * Same-origin policy is not a defense against a transport that was designed
 	 * to cross origins.
 	 *
 	 * The filter is attached at `init()` rather than inside the route handler,

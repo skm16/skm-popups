@@ -62,7 +62,7 @@ final class Post_Type {
 	 * Dashicon shown beside the admin menu entry.
 	 *
 	 * A dashicon rather than a bundled SVG or a data URI: it inherits the admin
-	 * colour scheme, costs no request, and cannot fail a contrast check in a
+	 * color scheme, costs no request, and cannot fail a contrast check in a
 	 * scheme popkit has never seen.
 	 *
 	 * @since 0.1.0
@@ -262,7 +262,7 @@ final class Post_Type {
 			/*
 			 * Deleting a user must not delete the site's popups. They are site
 			 * infrastructure that happens to have an author, and losing a live
-			 * campaign because the person who wrote it left the organisation is
+			 * campaign because the person who wrote it left the organization is
 			 * the kind of silent content destruction `docs/CLAUDE.md` forbids.
 			 */
 			'delete_with_user'    => false,

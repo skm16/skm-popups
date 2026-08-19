@@ -37,6 +37,7 @@ import { createElement, Fragment } from '@wordpress/element';
 import {
 	Button,
 	Notice,
+	RadioControl,
 	SelectControl,
 	ToggleControl,
 } from '@wordpress/components';
@@ -50,7 +51,7 @@ import { impossibleGroups } from '../warnings.js';
  * Human-readable name for a registry group key.
  *
  * The registry declares group keys, not labels, so the two popkit ships are
- * named here. An unrecognised group — one a plugin introduced — falls back to
+ * named here. An unrecognized group — one a plugin introduced — falls back to
  * its own key, which is worse than a translated label and much better than
  * dropping the conditions in it on the floor.
  *
@@ -270,12 +271,60 @@ export function ConditionsPanel( { conditions, onChange, registry } ) {
 		);
 	}
 
+	/**
+	 * A group holding one rule of the first registered condition.
+	 *
+	 * @return {Object} New group.
+	 */
+	const blankGroup = () => ( {
+		rules: [
+			{
+				type: firstType,
+				negate: false,
+				values: defaultValues( registry.conditions[ firstType ] ),
+			},
+		],
+	} );
+
 	return (
 		<div className="popkit-conditions">
+			{ /*
+			 * An empty rule set has always meant "every page" — see
+			 * `docs/data-model.md` -> Rule set — but saying so in a sentence
+			 * under an empty box asked authors to infer it, and the inference
+			 * runs the wrong way: an empty list of permissions usually means
+			 * nothing is permitted. Authors read a brand new popup as switched
+			 * off. Nothing new is stored here; the choice is a view of whether
+			 * `groups` is empty, so it cannot disagree with what will be saved.
+			 */ }
+			<RadioControl
+				label={ __( 'Where this popup may show', 'popkit' ) }
+				selected={ 0 === groups.length ? 'everywhere' : 'rules' }
+				options={ [
+					{
+						label: __( 'Everywhere on the site', 'popkit' ),
+						value: 'everywhere',
+					},
+					{
+						label: __( 'Only where these rules match', 'popkit' ),
+						value: 'rules',
+					},
+				] }
+				onChange={ ( scope ) =>
+					onChange( {
+						...conditions,
+						// Site-wide *is* the empty rule set, so there is nowhere
+						// to park the rules while it is chosen. Switching back
+						// starts from one editable rule rather than an empty box.
+						groups: 'everywhere' === scope ? [] : [ blankGroup() ],
+					} )
+				}
+			/>
+
 			{ 0 === groups.length && (
 				<p className="popkit-conditions__empty">
 					{ __(
-						'No targeting rules. This popup is eligible on every page.',
+						'This popup is eligible on every page, subject to its triggers, schedule and frequency.',
 						'popkit'
 					) }
 				</p>

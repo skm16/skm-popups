@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
  * Holds every trigger type that a popup may arm.
  *
  * A {@see Trigger} declares its key, its editor label, and the schema of the
- * fields it accepts — nothing more. Triggers have no server-side behaviour at
+ * fields it accepts — nothing more. Triggers have no server-side behavior at
  * all: arming, first-fire-wins, and teardown are entirely a front-end concern,
  * and the runtime that implements them keys off the same string. This class
  * exists so that the editor can render controls for a trigger and so that the
@@ -63,7 +63,7 @@ final class Triggers {
 	 */
 	public function register( Trigger $trigger ): void {
 		/*
-		 * Defence in depth. A well-formed Trigger cannot carry an empty key, but
+		 * Defense in depth. A well-formed Trigger cannot carry an empty key, but
 		 * the registry is what the rest of the plugin indexes by that key, so it
 		 * refuses to hold one rather than trusting its caller.
 		 */
@@ -91,7 +91,7 @@ final class Triggers {
 	/**
 	 * Returns a registered trigger by key.
 	 *
-	 * Returning `null` for an unrecognised key is the normal case, not an error:
+	 * Returning `null` for an unrecognized key is the normal case, not an error:
 	 * a popup may carry a trigger config whose plugin is deactivated.
 	 *
 	 * @since 0.1.0

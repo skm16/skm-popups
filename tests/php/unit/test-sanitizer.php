@@ -163,7 +163,7 @@ final class Test_Popkit_Sanitizer extends TestCase {
 					'maxLength' => 5,
 				)
 			),
-			'The canonical JSON Schema spelling of the length cap is honoured.'
+			'The canonical JSON Schema spelling of the length cap is honored.'
 		);
 
 		$this->assertSame(
@@ -175,7 +175,7 @@ final class Test_Popkit_Sanitizer extends TestCase {
 					'max_length' => 5,
 				)
 			),
-			'The snake_case alias is honoured too, so a registration array reads naturally.'
+			'The snake_case alias is honored too, so a registration array reads naturally.'
 		);
 
 		$this->assertIsString(
@@ -303,7 +303,7 @@ final class Test_Popkit_Sanitizer extends TestCase {
 		$this->assertSame(
 			'slide',
 			Sanitizer::sanitize_value( 'somersault', $with_default ),
-			'An unrecognised value falls back to the declared default rather than being stored.'
+			'An unrecognized value falls back to the declared default rather than being stored.'
 		);
 
 		$this->assertSame(
@@ -315,7 +315,7 @@ final class Test_Popkit_Sanitizer extends TestCase {
 					'enum' => array( 'fade', 'slide' ),
 				)
 			),
-			'With no default declared, the first permitted value is the fallback. Storing the unrecognised value would put a state in the database that no control can render.'
+			'With no default declared, the first permitted value is the fallback. Storing the unrecognized value would put a state in the database that no control can render.'
 		);
 
 		$this->assertSame(
@@ -370,7 +370,7 @@ final class Test_Popkit_Sanitizer extends TestCase {
 				),
 				$schema
 			),
-			'Items are re-indexed. A declared array is a list, and submitted keys carry no meaning the schema recognises.'
+			'Items are re-indexed. A declared array is a list, and submitted keys carry no meaning the schema recognizes.'
 		);
 
 		$this->assertSame(
@@ -388,15 +388,15 @@ final class Test_Popkit_Sanitizer extends TestCase {
 	 * the only spelling a condition can actually register, and it is the spelling
 	 * `post_ids` needs: `docs/data-model.md` declares that field as `ids: int[]`.
 	 *
-	 * Sanitization must therefore honour it. Reading `items` only as a nested
-	 * schema array leaves the bare type name unrecognised, the item schema
+	 * Sanitization must therefore honor it. Reading `items` only as a nested
+	 * schema array leaves the bare type name unrecognized, the item schema
 	 * silently defaults to `string`, and every stored ID becomes `'42'` instead
 	 * of `42` — a shape mismatch that survives the round trip and only surfaces
 	 * downstream, wherever a strict comparison against a real post ID fails.
 	 *
 	 * @return void
 	 */
-	public function test_an_array_field_honours_the_registered_item_type() {
+	public function test_an_array_field_honors_the_registered_item_type() {
 		$this->assertSame(
 			array( 12, 34 ),
 			Sanitizer::sanitize_value(
@@ -428,7 +428,7 @@ final class Test_Popkit_Sanitizer extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_an_unrecognised_field_type_falls_back_to_the_declared_default() {
+	public function test_an_unrecognized_field_type_falls_back_to_the_declared_default() {
 		$this->assertSame(
 			'fallback',
 			Sanitizer::sanitize_value(
@@ -546,7 +546,7 @@ final class Test_Popkit_Sanitizer extends TestCase {
 				'mode'  => 'slide',
 			),
 			$rule['values'],
-			'Every declared field is coerced to its declared type, out-of-range values are clamped, an unrecognised enum choice falls back to the declared default, and a key the schema does not declare is dropped. `ids` was neither submitted nor given a default, so it is absent rather than invented as an empty list.'
+			'Every declared field is coerced to its declared type, out-of-range values are clamped, an unrecognized enum choice falls back to the declared default, and a key the schema does not declare is dropped. `ids` was neither submitted nor given a default, so it is absent rather than invented as an empty list.'
 		);
 
 		$this->assertArrayNotHasKey(

@@ -192,9 +192,9 @@ final class Test_Popkit_Rest_Schema extends WP_UnitTestCase {
 
 		$this->assertIsArray( $data, 'The registry payload must be a keyed structure.' );
 		$this->assertSame(
-			array( 'conditions', 'triggers', 'controls' ),
+			array( 'conditions', 'triggers', 'controls', 'vocabulary' ),
 			array_keys( $data ),
-			'The payload must carry conditions, triggers and controls, in that fixed order. The editor reads all three: the first two describe what can be targeted and what can open a popup, the third names the controls it must be able to render.'
+			'The payload must carry conditions, triggers, controls and vocabulary, in that fixed order. The editor reads all four: the first two describe what can be targeted and what can open a popup, the third names the controls it must be able to render, and the fourth names the values popkit itself defines so the block editor and the classic screen call them the same thing.'
 		);
 		$this->assertSame(
 			Condition::FIELD_CONTROLS,
@@ -251,7 +251,7 @@ final class Test_Popkit_Rest_Schema extends WP_UnitTestCase {
 	/**
 	 * The permission callback is a named callback checking a capability.
 	 *
-	 * Asserted structurally as well as behaviourally: `__return_true` on this
+	 * Asserted structurally as well as behaviorally: `__return_true` on this
 	 * route would look like an oversight rather than a decision, and the one
 	 * deliberate exception in the plugin uses a named callback precisely so the
 	 * choice stays greppable.

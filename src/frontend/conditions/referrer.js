@@ -34,7 +34,7 @@
  *   (one astral character is two code units) and `????` in PHP (four bytes).
  *   `*`, `exact`, `prefix` and `contains` are unaffected — `*` consumes a run,
  *   so its unit cannot be observed, and UTF-8 and UTF-16 are both
- *   self-synchronising, so a substring can only ever be found on a character
+ *   self-synchronizing, so a substring can only ever be found on a character
  *   boundary in either.
  * - **The length cap.** {@link MAX_VALUE_LENGTH} is compared against
  *   `String.length`, which is code units rather than bytes. A value that passed
@@ -79,7 +79,7 @@
  *
  * The referrer's **host and path** — `docs/CLAUDE.md` -> URL match language —
  * so `https://www.google.com/search?q=popups#top` is matched as
- * `www.google.com/search`. No scheme, no port normalisation beyond what `URL`
+ * `www.google.com/search`. No scheme, no port normalization beyond what `URL`
  * does, no query string, no fragment. A path always begins with `/`, and a
  * referrer with no path reads as `example.org/`, so an author writing
  * `example.org` needs `prefix` rather than `exact`. The query string is
@@ -232,7 +232,7 @@ function globMatches( pattern, subject ) {
  *
  * An over-length value is a non-match rather than a throw, matching
  * `Popkit\Url_Matcher::matches()` — a targeting miss during evaluation must
- * never become an exception. An unrecognised mode returns `undefined`, because
+ * never become an exception. An unrecognized mode returns `undefined`, because
  * an unreadable rule is not a rule that failed; the caller turns that into a
  * fail-closed denial.
  *
@@ -273,7 +273,7 @@ export function urlMatches( mode, value, subject ) {
  * Reduces `document.referrer` to the host and path that rules are matched on.
  *
  * The order is the security-relevant part and it is the same order
- * `Popkit\Url_Matcher::normalise_path()` uses: every structural decision — where
+ * `Popkit\Url_Matcher::normalize_path()` uses: every structural decision — where
  * the host ends, where the query begins, where the fragment begins — is taken
  * against the raw, still-encoded string by the `URL` parser, and percent-decoding
  * happens last and exactly once. Decoding first would let `%23` and `%3F`
@@ -281,7 +281,7 @@ export function urlMatches( mode, value, subject ) {
  * decoded `/`, `?` or `#` in the result is an ordinary literal character.
  *
  * `host` rather than `hostname`, so a referrer from a non-default port is
- * matched as the origin it actually is instead of silently equalling the
+ * matched as the origin it actually is instead of silently equaling the
  * default-port site of the same name.
  *
  * A referrer the parser rejects, and a malformed percent escape in the path,

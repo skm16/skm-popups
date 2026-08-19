@@ -137,14 +137,14 @@ Constraints on this exception:
 - Bypassing the REST nonce is safe **specifically because this route is `GET`,
   writes nothing, and returns one boolean**. CSRF protects against state changes;
   there is no state to change. This reasoning does not extend to any other route.
-- **Same-origin policy is not a defence here, and must never be relied on as
+- **Same-origin policy is not a defense here, and must never be relied on as
   one.** It governs `fetch()` and `XHR`; it does not govern `<script src>`.
   WordPress serves any REST route as JSONP when `_jsonp` is present —
   `rest_jsonp_enabled` defaults to true, the callback name is read straight from
   `$_GET`, and the response is emitted as `application/javascript` — so
   `<script src=".../context?fields=user_state&_jsonp=steal">` on an attacker's
   page executes there with the visitor's cookies attached and hands them the
-  login state. Two defences are implemented, and both are needed:
+  login state. Two defenses are implemented, and both are needed:
   - `rest_send_cors_headers` is removed from `rest_pre_serve_request` for this
     route, so no `Access-Control-Allow-Origin` is sent and a credentialed
     `fetch()`/`XHR` read is blocked.
@@ -251,7 +251,7 @@ Non-negotiable. This is the product differentiator, not a polish item.
   dismissal mechanisms, never substitutes: an overlay is not a discoverable
   affordance, carries no accessible name, and is unreachable by keyboard and by
   most assistive technology. There is no `close_button: false`.
-- Colour contrast in shipped themes meets WCAG 2.2 AA (4.5:1 body, 3:1 large).
+- Color contrast in shipped themes meets WCAG 2.2 AA (4.5:1 body, 3:1 large).
 
 Every accessibility invariant above has a corresponding Playwright assertion.
 If you add a UI surface, add its assertions in the same commit. The suite covers
@@ -311,7 +311,7 @@ CLIENT (varies by visitor)
   trigger for that popup.
 - Every trigger `setup()` returns a teardown function. This is required, not
   optional — the controller calls it on fire, on abort, and on `pagehide`.
-- A popup is recorded as **seen** only after a successful, non-cancelled open —
+- A popup is recorded as **seen** only after a successful, non-canceled open —
   after `popkit:before-open` was not prevented and the dialog is actually
   visible. Never on eligibility, arming, or trigger fire.
 

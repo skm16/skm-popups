@@ -57,7 +57,7 @@ export default {
 	 * and of `"wide"`. Reading it as "a rule nobody matches" gives that
 	 * provenance a decision, and `negate: true` turns that decision into a
 	 * site-wide match. Nothing is clamped: an out-of-range width is refused, not
-	 * repaired into a neighbouring rule the author never wrote.
+	 * repaired into a neighboring rule the author never wrote.
 	 *
 	 * @param {Object} [values]           Stored rule values.
 	 * @param {number} [values.max_width] Widest viewport that matches, in CSS pixels.

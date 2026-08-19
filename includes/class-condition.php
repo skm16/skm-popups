@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  * Registration is developer-facing, so every constraint below fails loudly with
  * an `InvalidArgumentException` at registration time rather than degrading
  * quietly at evaluation time. A malformed condition that survived registration
- * would surface as an unlabelled control in the editor, a rule that sanitizes to
+ * would surface as an unlabeled control in the editor, a rule that sanitizes to
  * nothing, or, worst case, targeting that silently widens.
  *
  * ## Field schema
@@ -69,9 +69,19 @@ defined( 'ABSPATH' ) || exit;
  * - `enum` — **required when `type` is `enum`, forbidden otherwise**. A
  *   non-empty list of string or integer values. The stored value must be one of
  *   them.
+ * - `enum_labels` — optional, permitted only when `type` is `enum`. A map from
+ *   each permitted value to the human-readable, already-translated string the
+ *   editor shows in its place. Without it both editors label an option with the
+ *   stored token itself, so an author picking how a URL is compared reads
+ *   `prefix` and `glob` rather than "Starts with" and "Wildcard pattern".
+ *
+ *   It must cover **every** member and name **no** value outside the list.
+ *   Partial coverage is rejected rather than filled in, because a half-labeled
+ *   select renders some options as prose and the rest as identifiers, and the
+ *   one it forgot is invariably the one added last.
  * - `label` — **required**. Already translated by the caller; this class does
  *   not translate it and does not escape it, because escaping belongs at
- *   output. An empty label is rejected: an unlabelled control is an
+ *   output. An empty label is rejected: an unlabeled control is an
  *   accessibility failure, and accessibility is this plugin's differentiator.
  * - `control` — **required**. One of {@see Condition::FIELD_CONTROLS}. The
  *   editor renders from the shared control map only; a registration may not
@@ -93,7 +103,7 @@ defined( 'ABSPATH' ) || exit;
  *   runtime one.
  *
  * Any other key is rejected. A typo such as `lable` would otherwise sit in the
- * schema doing nothing while the control rendered unlabelled — the same class of
+ * schema doing nothing while the control rendered unlabeled — the same class of
  * silent failure as a mistyped capability map key.
  *
  * ## What this class is not responsible for
@@ -168,6 +178,7 @@ final class Condition {
 		'taxonomy-select',
 		'date-time',
 		'url-match',
+		'color',
 	);
 
 	/**
@@ -176,7 +187,7 @@ final class Condition {
 	 * @since 0.1.0
 	 * @var string[]
 	 */
-	public const FIELD_SCHEMA_KEYS = array( 'type', 'items', 'enum', 'default', 'label', 'control', 'min', 'max', 'max_length' );
+	public const FIELD_SCHEMA_KEYS = array( 'type', 'items', 'enum', 'enum_labels', 'default', 'label', 'control', 'min', 'max', 'max_length' );
 
 	/**
 	 * Field types that may declare `min` and `max`.
@@ -278,7 +289,7 @@ final class Condition {
 				esc_html(
 					sprintf(
 						/* translators: %s: condition key. */
-						__( 'The popkit condition `%s` must declare a non-empty label. The editor has no other way to name its control, and an unlabelled control is not accessible.', 'popkit' ),
+						__( 'The popkit condition `%s` must declare a non-empty label. The editor has no other way to name its control, and an unlabeled control is not accessible.', 'popkit' ),
 						$key
 					)
 				)
@@ -464,6 +475,7 @@ final class Condition {
 
 		self::validate_items( $owner_key, $field_name, $schema, $type );
 		self::validate_enum( $owner_key, $field_name, $schema, $type );
+		self::validate_enum_labels( $owner_key, $field_name, $schema, $type );
 		self::validate_label_and_control( $owner_key, $field_name, $schema );
 		self::validate_default( $owner_key, $field_name, $schema, $type );
 		self::validate_bounds( $owner_key, $field_name, $schema, $type );
@@ -584,6 +596,132 @@ final class Condition {
 								/* translators: %s: the offending enum value type. */
 								__( 'Its enum list contains a value of type %s. Permitted values must be strings or integers so they survive a JSON round trip.', 'popkit' ),
 								get_debug_type( $value )
+							)
+						)
+					)
+				);
+			}
+		}
+	}
+
+	/**
+	 * Validates the optional `enum_labels` map against the declared values.
+	 *
+	 * Coverage is required in both directions: every permitted value must be
+	 * labeled, and no label may name a value that is not permitted. Each half
+	 * catches a different mistake. A missing label renders that one option as its
+	 * stored token beside options that read as prose, which looks like a bug in
+	 * the option rather than in the registration. A label for a value that was
+	 * renamed or removed is dead weight that silently stops applying, and the
+	 * author sees the raw token again with nothing to explain why.
+	 *
+	 * Membership is compared on string casts, because PHP normalizes a numeric
+	 * string array key to an integer: a registration writing `'1' => 'Monday'`
+	 * against an enum of `array( 1, 2 )` has declared the label it meant, and
+	 * rejecting it for the key type PHP chose would be an error about nothing.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @param string $owner_key  Registry key of the condition or trigger.
+	 * @param string $field_name Field name the schema belongs to.
+	 * @param array  $schema     Field schema.
+	 * @param string $type       Declared field type.
+	 * @return void
+	 *
+	 * @throws \InvalidArgumentException When the map is misplaced, mistyped, or
+	 *                                   does not correspond exactly to the enum.
+	 */
+	private static function validate_enum_labels( string $owner_key, string $field_name, array $schema, string $type ): void {
+		if ( ! array_key_exists( 'enum_labels', $schema ) ) {
+			return;
+		}
+
+		if ( 'enum' !== $type ) {
+			throw new \InvalidArgumentException(
+				esc_html(
+					self::field_message(
+						$owner_key,
+						$field_name,
+						sprintf(
+							/* translators: %s: declared field type. */
+							__( 'It declares enum_labels but its type is `%s`. Only an enum field names its permitted values, so only an enum field can label them.', 'popkit' ),
+							$type
+						)
+					)
+				)
+			);
+		}
+
+		$labels = $schema['enum_labels'];
+
+		if ( ! is_array( $labels ) ) {
+			throw new \InvalidArgumentException(
+				esc_html(
+					self::field_message(
+						$owner_key,
+						$field_name,
+						sprintf(
+							/* translators: %s: the type received instead of an array. */
+							__( 'Its enum_labels is %s. It must be an array mapping each permitted value to the text the editor shows for it.', 'popkit' ),
+							get_debug_type( $labels )
+						)
+					)
+				)
+			);
+		}
+
+		$members = array_map( 'strval', $schema['enum'] );
+		$labeled = array_map( 'strval', array_keys( $labels ) );
+
+		$unlabeled = array_diff( $members, $labeled );
+
+		if ( array() !== $unlabeled ) {
+			throw new \InvalidArgumentException(
+				esc_html(
+					self::field_message(
+						$owner_key,
+						$field_name,
+						sprintf(
+							/* translators: %s: comma-separated list of permitted values with no label. */
+							__( 'Its enum_labels does not label the value or values %s. Every permitted value must be labeled, so that a select never mixes readable options with stored tokens.', 'popkit' ),
+							implode( ', ', array_map( self::describe( ... ), $unlabeled ) )
+						)
+					)
+				)
+			);
+		}
+
+		$strays = array_diff( $labeled, $members );
+
+		if ( array() !== $strays ) {
+			throw new \InvalidArgumentException(
+				esc_html(
+					self::field_message(
+						$owner_key,
+						$field_name,
+						sprintf(
+							/* translators: 1: comma-separated list of labeled values that are not permitted, 2: comma-separated list of permitted values. */
+							__( 'Its enum_labels labels %1$s, which is not among its permitted values: %2$s. A label for a value the field cannot hold never applies.', 'popkit' ),
+							implode( ', ', array_map( self::describe( ... ), $strays ) ),
+							implode( ', ', array_map( self::describe( ... ), $members ) )
+						)
+					)
+				)
+			);
+		}
+
+		foreach ( $labels as $value => $label ) {
+			if ( ! is_string( $label ) || '' === trim( $label ) ) {
+				throw new \InvalidArgumentException(
+					esc_html(
+						self::field_message(
+							$owner_key,
+							$field_name,
+							sprintf(
+								/* translators: 1: the enum value whose label is invalid, 2: the type received instead of a non-empty string. */
+								__( 'Its enum_labels entry for %1$s is %2$s. A label must be a non-empty, already-translated string.', 'popkit' ),
+								self::describe( $value ),
+								is_string( $label ) ? __( 'blank', 'popkit' ) : get_debug_type( $label )
 							)
 						)
 					)
@@ -786,7 +924,7 @@ final class Condition {
 	 * declared cap on a `url_path` or `referrer` `value` and the cap the matcher
 	 * enforces at runtime are the same number read the same way.
 	 *
-	 * A cap of zero or less is rejected rather than honoured: it would describe a
+	 * A cap of zero or less is rejected rather than honored: it would describe a
 	 * field that can never hold a usable value, which is a registration mistake
 	 * every time.
 	 *

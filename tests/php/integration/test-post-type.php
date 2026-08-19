@@ -185,7 +185,7 @@ final class Test_Popkit_Post_Type extends WP_UnitTestCase {
 	 * The expectation is read from Capabilities::map() deliberately: what is
 	 * under test here is that the post type carries the plugin's map. The map's
 	 * contents are asserted in tests/php/unit/test-capability-map.php and its
-	 * behaviour in tests/php/integration/test-capabilities.php.
+	 * behavior in tests/php/integration/test-capabilities.php.
 	 *
 	 * @return void
 	 */

@@ -33,7 +33,7 @@
  * popup opens on load and `openRecord()` refuses an automatic open while anything
  * else is on screen. `e2e-modal` has the lowest post ID and is considered first.
  * It cannot win that race today, but it will the moment Phase 4 registers
- * `url_path` and its rule starts passing on `/popkit-e2e/`. Cancelling its
+ * `url_path` and its rule starts passing on `/popkit-e2e/`. Canceling its
  * `popkit:before-open` from an init script settles the question now, using the
  * plugin's own public veto, and changes nothing about what the server emitted.
  *
@@ -145,7 +145,7 @@ const deletePopup = async ( requestUtils, id ) => {
  * Cancels the automatic open of named popups, before any plugin script runs.
  *
  * Uses `popkit:before-open`, which is public API and cancelable by design. A
- * cancelled open shows nothing and writes no seen record.
+ * canceled open shows nothing and writes no seen record.
  */
 const suppressPopups = async ( page, slugs ) => {
 	await page.addInitScript( ( suppressed ) => {
@@ -232,7 +232,7 @@ test.describe( 'popkit accessibility', () => {
 		// Phase 2 has no triggers, so an eligible popup opens on load.
 		await expect( modal, 'the popup opened' ).toHaveCount( 1 );
 
-		// Escape is native `<dialog>` behaviour and is never preventDefault()ed.
+		// Escape is native `<dialog>` behavior and is never preventDefault()ed.
 		await page.keyboard.press( 'Escape' );
 		await expect( modal, 'Escape closed it' ).toHaveCount( 0 );
 

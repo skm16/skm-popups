@@ -73,7 +73,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * `enqueue_assets()` runs on `wp_enqueue_scripts` and `render()` on `wp_footer`,
  * which means the query and the server-side evaluation happen during `wp_head`,
- * before anything is printed. The matched set is memoised for the rest of the
+ * before anything is printed. The matched set is memoized for the rest of the
  * request so the two hooks cannot disagree about which popups survived — a
  * disagreement would either enqueue assets for a page with no popups or print
  * markup no script would ever animate.
@@ -216,7 +216,7 @@ final class Frontend {
 	/**
 	 * Popups that survived server-side evaluation, or null before the query runs.
 	 *
-	 * Memoised per request. Null and an empty array mean different things: null is
+	 * Memoized per request. Null and an empty array mean different things: null is
 	 * "not yet asked", the empty array is "asked, nothing matched".
 	 *
 	 * @since 0.1.0
@@ -409,7 +409,7 @@ final class Frontend {
 	/**
 	 * Returns the popups that survived server-side evaluation.
 	 *
-	 * Pipeline stages 1 and 2. The result is memoised for the request; see
+	 * Pipeline stages 1 and 2. The result is memoized for the request; see
 	 * {@see Frontend::reset()} for the one situation in which that has to be
 	 * undone.
 	 *
@@ -539,7 +539,7 @@ final class Frontend {
 	}
 
 	/**
-	 * Forgets the memoised match and the printed flag.
+	 * Forgets the memoized match and the printed flag.
 	 *
 	 * A real pageview never needs this: the query runs once, the footer prints
 	 * once, and the process ends. It exists for the test suite, which serves many
@@ -643,7 +643,7 @@ final class Frontend {
 	 *
 	 * Pipeline stage 2's actual judgement, and the evaluator
 	 * {@see Rule_Evaluator} was built to accept. That parameter shipped with no
-	 * fallback behaviour of its own so that a condition nobody had implemented
+	 * fallback behavior of its own so that a condition nobody had implemented
 	 * could not silently pass; this method is what supplies the real thing, and
 	 * {@see Frontend::matched_popups()} and {@see Frontend::popup_config()} pass
 	 * this same one so survival and emission are decided identically.
@@ -762,7 +762,7 @@ final class Frontend {
 	 * purpose. Answering "yes" when the schedule is in fact off costs one request
 	 * that goes unread. Answering "no" when it is on leaves the client with no
 	 * authoritative clock, and every scheduled popup then fails closed and never
-	 * shows — correct behaviour applied to a question that should never have been
+	 * shows — correct behavior applied to a question that should never have been
 	 * asked.
 	 *
 	 * @since 0.1.0

@@ -422,7 +422,7 @@ function writeButton() {
 }
 
 /**
- * Dispatches a bubbling, cancellable click, as a visitor's would be.
+ * Dispatches a bubbling, cancelable click, as a visitor's would be.
  *
  * @param {Element} target Element to click.
  * @return {void}
@@ -1041,7 +1041,7 @@ describe( 'stage 7 -> the fail-closed matrix', () => {
 		 * rules, and a stored entry that is not a rule leaves as
 		 * `popkit_unsatisfiable`, which the matrix above covers as the emitted
 		 * case. What arrives here is a config some other hand mangled: a caching
-		 * layer that rewrote the JSON, an optimiser that inlined it wrong, a
+		 * layer that rewrote the JSON, an optimizer that inlined it wrong, a
 		 * filter on the script tag. The controller parses whatever is in that
 		 * element, so it is worth knowing it fails shut on a config popkit did not
 		 * write, and worth saying plainly that this is what these rows are.

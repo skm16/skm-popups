@@ -161,7 +161,7 @@ final class Test_Popkit_Plugin_Boot extends WP_UnitTestCase {
 		$this->assertSame(
 			$after_first,
 			$this->hook_snapshot(),
-			'boot() registered hooks a second and third time. First-class callable syntax produces a new Closure on every evaluation, so WordPress cannot recognise the duplicate: the $booted guard is the only thing preventing it.'
+			'boot() registered hooks a second and third time. First-class callable syntax produces a new Closure on every evaluation, so WordPress cannot recognize the duplicate: the $booted guard is the only thing preventing it.'
 		);
 	}
 
@@ -173,7 +173,7 @@ final class Test_Popkit_Plugin_Boot extends WP_UnitTestCase {
 	 * `.org`-hosted plugins by itself since 4.6 — the first `__()` call against a
 	 * domain triggers a just-in-time load from
 	 * `WP_LANG_DIR/plugins/{domain}-{locale}.mo` — so `load_plugin_textdomain()`
-	 * loads the same catalogue a second time. Plugin Check, which a submission
+	 * loads the same catalog a second time. Plugin Check, which a submission
 	 * has to pass, reports the call, and it was the only finding standing between
 	 * this plugin and a clean report.
 	 *

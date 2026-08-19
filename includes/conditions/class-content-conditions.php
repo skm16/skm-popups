@@ -48,10 +48,10 @@ defined( 'ABSPATH' ) || exit;
  * On this class, as one static dispatcher keyed by condition key — not on the
  * {@see Condition} value object and not in the registry.
  *
- * {@see Condition} is readonly and deliberately carries no behaviour: its
+ * {@see Condition} is readonly and deliberately carries no behavior: its
  * docblock states that it evaluates nothing, and its constructor takes a fixed
  * five arguments. Adding a callable to it would put a closure inside a value
- * object that is otherwise pure data, JSON-serialised straight to the editor by
+ * object that is otherwise pure data, JSON-serialized straight to the editor by
  * `to_schema()`, and compared by value in tests. {@see \Popkit\Conditions} is a
  * key-to-object map with the same reason to stay data-only.
  *
@@ -81,7 +81,7 @@ defined( 'ABSPATH' ) || exit;
  *    plugin. Without a filter, a plugin could register a `Context::Server`
  *    condition that nothing is able to decide — its rules would be indeterminate
  *    forever, and the registry invariant that registering a condition requires no
- *    core change would hold for the schema and quietly fail for the behaviour.
+ *    core change would hold for the schema and quietly fail for the behavior.
  *
  * The filter callback decides only when no earlier callback has, and only when it
  * was handed the documented argument shape; anything else passes straight
@@ -627,7 +627,7 @@ final class Content_Conditions {
 	 * parent category does not match a post filed only under its child, matching
 	 * `has_term()`'s own semantics. Expanding to descendants would mean a term
 	 * query on every pageview and a rule whose reach changes when somebody
-	 * reorganises a taxonomy.
+	 * reorganizes a taxonomy.
 	 *
 	 * Three inputs short-circuit to false before WordPress is asked anything: no
 	 * taxonomy, no terms, and a taxonomy nothing has registered. The empty-terms

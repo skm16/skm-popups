@@ -4,7 +4,7 @@
  *
  * `Popkit\Rule_Bounds` is what stops "preserve rules whose type is not
  * registered" from meaning "store whatever arrives". Its job is narrow and its
- * failure modes are specific, so the tests below are organised around two
+ * failure modes are specific, so the tests below are organized around two
  * properties rather than around method coverage.
  *
  * **Nothing is truncated.** Every limit is asserted from both sides: the value at

@@ -49,7 +49,7 @@
  *   scroll event.
  *
  * Only `false` means "try again", so a caller that cannot tell its refusals
- * apart, or reports nothing at all, gets the conservative behaviour rather than
+ * apart, or reports nothing at all, gets the conservative behavior rather than
  * a popup that re-asks forever.
  *
  * ## Teardown is required, and it is the whole point
@@ -117,8 +117,8 @@ const armedPopups = new Set();
  * nothing: its task queues are suspended, so no timer, no scroll handler and no
  * click handler can run while it sits there. `page_load` is the one worth saying
  * outright — its timer is suspended along with everything else and resumes on
- * restore, so a delay the visitor had nearly finished earning is honoured on the
- * document they came back to rather than cancelled behind their back. Time spent
+ * restore, so a delay the visitor had nearly finished earning is honored on the
+ * document they came back to rather than canceled behind their back. Time spent
  * on another page is not time spent on this one, and that is what the pause
  * expresses.
  *
@@ -244,7 +244,7 @@ function resolve( registry, type ) {
  * yields null: it armed nothing this module can account for, so it contributes
  * nothing to the popup's teardown list and cannot on its own cause the shared
  * `pagehide` listener to be bound. The popup's other triggers stay armed and
- * tearable, and the defect is on the console rather than in the behaviour.
+ * tearable, and the defect is on the console rather than in the behavior.
  *
  * A `setup()` that throws *after* binding a listener leaks it, and nothing here
  * can know that it did. The warning is the remedy.

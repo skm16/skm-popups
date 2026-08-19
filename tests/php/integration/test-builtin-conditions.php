@@ -331,7 +331,7 @@ final class Test_Popkit_Builtin_Conditions extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Drops the REST server and the memoised match so the next test starts clean.
+	 * Drops the REST server and the memoized match so the next test starts clean.
 	 *
 	 * @return void
 	 */
@@ -545,7 +545,7 @@ final class Test_Popkit_Builtin_Conditions extends WP_UnitTestCase {
 	 * Every declared field can actually be rendered by the shared control map.
 	 *
 	 * A control absent from that map has no renderer, so the editor produces an
-	 * empty panel rather than an error, and an unlabelled control is an
+	 * empty panel rather than an error, and an unlabeled control is an
 	 * accessibility failure. The `Condition` constructor enforces both; this
 	 * asserts the enforcement was reached rather than trusting that it was.
 	 *
@@ -563,7 +563,7 @@ final class Test_Popkit_Builtin_Conditions extends WP_UnitTestCase {
 				$this->assertArrayHasKey(
 					'label',
 					$schema,
-					sprintf( 'The field "%s" on the condition "%s" declares no label. An unlabelled control is not accessible, and accessibility is this plugin\'s differentiator.', $field, $key )
+					sprintf( 'The field "%s" on the condition "%s" declares no label. An unlabeled control is not accessible, and accessibility is this plugin\'s differentiator.', $field, $key )
 				);
 
 				$this->assertContains(
@@ -858,7 +858,7 @@ final class Test_Popkit_Builtin_Conditions extends WP_UnitTestCase {
 	 * That route is the editor's only source of field schemas, so a condition
 	 * missing from the payload has no control and cannot be configured at all. The
 	 * context travels with it because the editor and the browser both key
-	 * behaviour off it.
+	 * behavior off it.
 	 *
 	 * @return void
 	 */

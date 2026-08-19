@@ -19,7 +19,7 @@
  * keys, the CSS class prefix and the PHP namespace all stay lowercase `popkit`
  * and must not be renamed to match: WordPress.org slugs are lowercase, Plugin
  * Check requires the text domain to equal the slug, and every one of those names
- * is already written into stored data or into translations. Capitalisation here
+ * is already written into stored data or into translations. Capitalization here
  * is presentation.
  *
  * @wordpress-plugin

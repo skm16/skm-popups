@@ -18,9 +18,9 @@
  * That is the whole of the bypass, and it is deliberate rather than incidental.
  * `open()` **does not bypass accessibility, and it does not bypass the veto**:
  *
- * - `popkit:before-open` is dispatched and honoured. Cancelling it cancels a
+ * - `popkit:before-open` is dispatched and honored. Canceling it cancels a
  *   programmatic open exactly as it cancels a triggered one, so consent
- *   integrations keep working against code they did not write, and a cancelled
+ *   integrations keep working against code they did not write, and a canceled
  *   programmatic open records no impression.
  * - Focus management, the close button, Escape, focus return and the
  *   one-modal-at-a-time rule are unchanged. Anything already open is closed
@@ -76,7 +76,7 @@ export const API_VERSION = 1;
  *
  * The runtime's methods return `null` for a slug no popup on this page carries,
  * which separates "there is nothing to open" from "it did not open" — the
- * second is an ordinary outcome of a cancelled `popkit:before-open` and is not
+ * second is an ordinary outcome of a canceled `popkit:before-open` and is not
  * worth a warning. The public methods flatten both to a boolean, because a
  * caller should not have to distinguish three states to know whether a popup is
  * on screen.

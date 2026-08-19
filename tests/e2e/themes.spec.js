@@ -1,12 +1,12 @@
 /**
  * The shipped themes.
  *
- * Phase 6's exit criteria. Every assertion reads a **computed** colour out of a
+ * Phase 6's exit criteria. Every assertion reads a **computed** color out of a
  * rendered popup and measures it, rather than reading the stylesheet. That
  * direction is the point: a check against the token declarations would be
  * testing what was typed into `themes.css`, and would keep passing after a
  * cascade change, a specificity accident or a `theme.json` collision made the
- * painted colour something else.
+ * painted color something else.
  *
  * ## Inherit is checked differently, on purpose
  *
@@ -54,14 +54,14 @@ const {
 const DOCROOT = process.env.POPKIT_E2E_DOCROOT || 'C:/tmp/popkit-e2e/wordpress';
 
 /**
- * Reads a theme's declared `base` and `contrast` palette colours.
+ * Reads a theme's declared `base` and `contrast` palette colors.
  *
  * Read from the theme's own `theme.json` rather than written down here, so the
  * test follows a theme that changes its palette instead of asserting a value
  * that used to be true.
  *
  * @param {string} slug Theme directory name.
- * @return {{base: string, contrast: string}|null} Colours, or null when absent.
+ * @return {{base: string, contrast: string}|null} Colors, or null when absent.
  */
 const themePalette = ( slug ) => {
 	const file = path.join( DOCROOT, 'wp-content/themes', slug, 'theme.json' );
@@ -161,10 +161,10 @@ const createThemedPopup = async ( requestUtils, theme, layout ) => {
 };
 
 /**
- * Reads the colours a browser actually painted for one popup.
+ * Reads the colors a browser actually painted for one popup.
  *
  * Everything comes from `getComputedStyle`, and the background is walked up the
- * ancestor chain until an opaque colour is found. That walk is not defensive
+ * ancestor chain until an opaque color is found. That walk is not defensive
  * padding: `.popkit-popup__content` and `.popkit-popup__close` both declare no
  * background of their own, so their computed `background-color` is
  * `rgba(0, 0, 0, 0)` and measuring text against it would report the contrast of
@@ -172,7 +172,7 @@ const createThemedPopup = async ( requestUtils, theme, layout ) => {
  *
  * @param {Object} page Playwright page.
  * @param {string} slug Popup slug.
- * @return {Promise<Object>} Computed colours.
+ * @return {Promise<Object>} Computed colors.
  */
 const readColors = async ( page, slug ) =>
 	page.evaluate( ( popupSlug ) => {
@@ -184,7 +184,7 @@ const readColors = async ( page, slug ) =>
 		 * Finds the nearest painted background, walking to the document root.
 		 *
 		 * @param {Element} start Element to start from.
-		 * @return {string} An opaque colour.
+		 * @return {string} An opaque color.
 		 */
 		const backdropOf = ( start ) => {
 			let node = start;
@@ -299,14 +299,14 @@ test.describe( 'popkit themes', () => {
 			 * Headings and links, separately from body text.
 			 *
 			 * This is the assertion whose absence let a real defect ship into a
-			 * baseline. Block themes colour headings and links explicitly —
+			 * baseline. Block themes color headings and links explicitly —
 			 * Twenty Twenty-Four uses `:root :where(h1, h2, …)` — and those
-			 * declarations beat the colour inherited from the popup's container.
+			 * declarations beat the color inherited from the popup's container.
 			 * On the dark theme that rendered a `#111111` heading on `#1e1e1e`:
 			 * 1.13:1, an invisible headline, while every existing contrast test
 			 * passed because nothing styles a `<p>`.
 			 *
-			 * `readColors()` had been collecting the heading colour all along
+			 * `readColors()` had been collecting the heading color all along
 			 * and nothing looked at it. Measuring a value and not asserting on it
 			 * is indistinguishable from not measuring it.
 			 */
@@ -340,7 +340,7 @@ test.describe( 'popkit themes', () => {
 						colors.surface
 					} is ${ formatRatio(
 						headingRatio
-					) }. The active theme is colouring headings and the popup is not reclaiming them.`
+					) }. The active theme is coloring headings and the popup is not reclaiming them.`
 				).toBeGreaterThanOrEqual( AA.TEXT );
 
 				expect(
@@ -357,11 +357,11 @@ test.describe( 'popkit themes', () => {
 					} is ${ formatRatio( linkRatio ) }.`
 				).toBeGreaterThanOrEqual( AA.TEXT );
 
-				// A link the same colour as its surrounding text needs
-				// something other than colour to mark it — WCAG 1.4.1.
+				// A link the same color as its surrounding text needs
+				// something other than color to mark it — WCAG 1.4.1.
 				expect(
 					colors.linkDecoration,
-					`${ theme }/${ layout } link is ${ colors.link } against body text ${ colors.text } with decoration "${ colors.linkDecoration }". A link that matches the text colour and carries no underline is distinguishable only by position.`
+					`${ theme }/${ layout } link is ${ colors.link } against body text ${ colors.text } with decoration "${ colors.linkDecoration }". A link that matches the text color and carries no underline is distinguishable only by position.`
 				).toContain( 'underline' );
 			} );
 
@@ -468,7 +468,7 @@ test.describe( 'popkit themes', () => {
 	 * catch mid-transition.
 	 *
 	 * Baselines are per-project (see `snapshotPathTemplate`) because font
-	 * rasterisation differs between engines, and a shared baseline would fail in
+	 * rasterization differs between engines, and a shared baseline would fail in
 	 * Firefox for a reason that has nothing to do with the stylesheet. Re-record
 	 * with `--update-snapshots` only after looking at the diff.
 	 */
@@ -499,10 +499,10 @@ test.describe( 'popkit themes', () => {
 						 * The first version of this used
 						 * `maxDiffPixelRatio: 0.01`, which sounds tight and is
 						 * not: one percent of a 512x150 panel is about 750
-						 * pixels, comfortably more than a recoloured link. It
+						 * pixels, comfortably more than a recolored link. It
 						 * let exactly that through — a link rendering in the
-						 * theme's accent colour instead of the popup's text
-						 * colour — and the baseline recorded the wrong result
+						 * theme's accent color instead of the popup's text
+						 * color — and the baseline recorded the wrong result
 						 * without failing.
 						 *
 						 * A ratio scales the tolerance with the panel, which is
@@ -724,7 +724,7 @@ test.describe( 'popkit themes', () => {
 		}, slug );
 
 		// Whatever the platform resolves Canvas/CanvasText to, both must be
-		// real painted colours rather than the transparent initial value.
+		// real painted colors rather than the transparent initial value.
 		expect( painted.background ).not.toBe( 'rgba(0, 0, 0, 0)' );
 		expect( painted.background ).not.toBe( 'transparent' );
 		expect( painted.color ).not.toBe( '' );

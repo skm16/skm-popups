@@ -194,6 +194,7 @@ final class Rest_Schema {
 				'conditions' => (object) $conditions,
 				'triggers'   => (object) $triggers,
 				'controls'   => Condition::FIELD_CONTROLS,
+				'vocabulary' => Vocabulary::all(),
 			)
 		);
 	}
@@ -265,6 +266,21 @@ final class Rest_Schema {
 						'type' => 'string',
 						'enum' => Condition::FIELD_CONTROLS,
 					),
+				),
+
+				/*
+				 * `vocabulary` is deliberately not described property by
+				 * property. It is a bag of label maps for the block editor's own
+				 * panels rather than an extension point, and enumerating its
+				 * shape here would be a third place to update when a theme or a
+				 * frequency mode is added — after the constant that permits the
+				 * value and the map that names it.
+				 */
+				'vocabulary' => array(
+					'description'          => __( 'Human-readable names for the values popkit itself defines: layouts, themes, sizes, positions, animations, appearance scales, frequency modes and schedule timezones.', 'popkit' ),
+					'type'                 => 'object',
+					'readonly'             => true,
+					'additionalProperties' => true,
 				),
 			),
 			'additionalProperties' => false,
@@ -358,19 +374,24 @@ final class Rest_Schema {
 			'additionalProperties' => array(
 				'type'                 => 'object',
 				'properties'           => array(
-					'type'       => array(
+					'type'        => array(
 						'description' => __( 'Value type. Sanitization is derived from this declaration.', 'popkit' ),
 						'type'        => 'string',
 						'enum'        => Condition::FIELD_TYPES,
 					),
-					'items'      => array(
+					'items'       => array(
 						'description' => __( 'Item type of an array field. Present only when the type is array.', 'popkit' ),
 						'type'        => 'string',
 						'enum'        => Condition::FIELD_ITEM_TYPES,
 					),
-					'enum'       => array(
+					'enum'        => array(
 						'description' => __( 'Permitted values of an enum field. Present only when the type is enum.', 'popkit' ),
 						'type'        => 'array',
+					),
+					'enum_labels' => array(
+						'description'          => __( 'Text the editor shows in place of each permitted value, keyed by that value. Present only when the registration declared it; without it a value labels itself.', 'popkit' ),
+						'type'                 => 'object',
+						'additionalProperties' => array( 'type' => 'string' ),
 					),
 
 					/*
@@ -382,24 +403,24 @@ final class Rest_Schema {
 					 * does not mean "anything goes" — it means the schema cannot be
 					 * validated at all.
 					 */
-					'default'    => array(
+					'default'     => array(
 						'description' => __( 'Default value, matching the declared type. Null means no default.', 'popkit' ),
 						'type'        => array( 'string', 'integer', 'number', 'boolean', 'array', 'null' ),
 					),
-					'label'      => array(
+					'label'       => array(
 						'description' => __( 'Translated control label. Never empty.', 'popkit' ),
 						'type'        => 'string',
 					),
-					'control'    => array(
+					'control'     => array(
 						'description' => __( 'Control the editor renders this field with, from the shared control map.', 'popkit' ),
 						'type'        => 'string',
 						'enum'        => Condition::FIELD_CONTROLS,
 					),
-					'min'        => array(
+					'min'         => array(
 						'description' => __( 'Inclusive lower bound. Numeric fields only.', 'popkit' ),
 						'type'        => 'number',
 					),
-					'max'        => array(
+					'max'         => array(
 						'description' => __( 'Inclusive upper bound. Numeric fields only.', 'popkit' ),
 						'type'        => 'number',
 					),
@@ -412,7 +433,7 @@ final class Rest_Schema {
 					 * There is a parity assertion in the test suite for exactly
 					 * this, so the two lists cannot drift apart again.
 					 */
-					'max_length' => array(
+					'max_length'  => array(
 						'description' => __( 'Maximum stored length. String fields only.', 'popkit' ),
 						'type'        => 'integer',
 						'minimum'     => 1,

@@ -23,7 +23,7 @@
  * well-formed JSON, a plausible answer, wrong for everybody.
  *
  * {@see Test_Popkit_Rest_Context::test_a_nonceless_request_with_only_the_logged_in_cookie_reports_logged_in()}
- * reproduces the core behaviour rather than describing it — it authenticates the
+ * reproduces the core behavior rather than describing it — it authenticates the
  * way `wp-load.php` does, serves the request through the real
  * `WP_REST_Server::serve_request()` so `rest_cookie_check_errors()` genuinely
  * runs, asserts that core did zero the current user, and only then asserts the
@@ -200,7 +200,7 @@ final class Test_Popkit_Rest_Context extends WP_UnitTestCase {
 	 * `Rest_Context::init()` is called here as a fixture guarantee. WordPress keys
 	 * a hook by callable identity, and the callback is a static array callable, so
 	 * calling it again where `Plugin::boot()` already did replaces the entry
-	 * instead of adding a second one. That keeps every behavioural test in this
+	 * instead of adding a second one. That keeps every behavioral test in this
 	 * file about the route rather than about the boot sequence, which
 	 * {@see Test_Popkit_Rest_Context::test_the_plugin_registers_the_context_route()}
 	 * covers on its own.
@@ -255,7 +255,7 @@ final class Test_Popkit_Rest_Context extends WP_UnitTestCase {
 	public function test_the_plugin_registers_the_context_route() {
 		$this->assertTrue(
 			self::$booted_by_plugin,
-			'Plugin::boot() does not attach Rest_Context::init(). The front-end bundle fetches /popkit/v1/context on any page whose config sets needsContext, and a 404 there fails every scheduled and every user_state popup closed — correct behaviour applied to a question that should have been answerable.'
+			'Plugin::boot() does not attach Rest_Context::init(). The front-end bundle fetches /popkit/v1/context on any page whose config sets needsContext, and a 404 there fails every scheduled and every user_state popup closed — correct behavior applied to a question that should have been answerable.'
 		);
 	}
 
@@ -308,7 +308,7 @@ final class Test_Popkit_Rest_Context extends WP_UnitTestCase {
 	 * 3. The route answers `logged_in` anyway, because it read the cookie rather
 	 *    than asking WordPress who the current user is.
 	 *
-	 * Step 2 is asserted explicitly. Without it a change to core's behaviour, or
+	 * Step 2 is asserted explicitly. Without it a change to core's behavior, or
 	 * a mistake in this fixture, would leave the current user set and the test
 	 * would pass against an `is_user_logged_in()` implementation — the exact bug
 	 * it exists to catch, silently uncovered.
@@ -609,7 +609,7 @@ final class Test_Popkit_Rest_Context extends WP_UnitTestCase {
 	 * Asserted as substrings rather than as exact values. When a request carries
 	 * a valid nonce, core replaces Cache-Control with its own no-cache set —
 	 * which also contains both directives — and pinning the exact string would
-	 * make this test fail on a behaviour that is correct.
+	 * make this test fail on a behavior that is correct.
 	 *
 	 * @return void
 	 */
@@ -686,7 +686,7 @@ final class Test_Popkit_Rest_Context extends WP_UnitTestCase {
 	 * {@see Test_Popkit_Rest_Context::test_no_cross_origin_headers_are_sent()}
 	 * pins — stops `fetch()` and `XMLHttpRequest` and does nothing whatsoever
 	 * about a `<script src>`, because JSONP is a transport that was designed to
-	 * cross origins and predates CORS entirely. Same-origin policy is not a defence
+	 * cross origins and predates CORS entirely. Same-origin policy is not a defense
 	 * against it. Without the refusal asserted here, every page on the web could
 	 * read whether a given visitor is signed in to this site, and the two tests
 	 * together are what make the claim "this route is not a cross-origin oracle"
@@ -694,7 +694,7 @@ final class Test_Popkit_Rest_Context extends WP_UnitTestCase {
 	 *
 	 * The filter is asserted to be attached before it is exercised. `apply_filters`
 	 * on a hook nobody listens to returns its default unchanged, so a test that
-	 * only called it would report a passing default as a passing defence.
+	 * only called it would report a passing default as a passing defense.
 	 *
 	 * @return void
 	 */
@@ -776,7 +776,7 @@ final class Test_Popkit_Rest_Context extends WP_UnitTestCase {
 	 *
 	 * Dispatched rather than served, deliberately. `serve_request()` runs core's
 	 * `rest_cookie_check_errors()`, which calls `wp_set_current_user( 0 )` itself
-	 * on every nonce-less REST request — that is the core behaviour this route
+	 * on every nonce-less REST request — that is the core behavior this route
 	 * exists to work around, not a popkit call, and counting it would make the
 	 * spy meaningless. `dispatch()` skips authentication, so anything the spy
 	 * records during it came from popkit.

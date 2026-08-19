@@ -27,7 +27,7 @@
  * exposes targeted content to the wrong audience; nothing of the sort is at
  * stake in a seen-count.
  *
- * The same reasoning governs malformed input: an unrecognised mode, a missing
+ * The same reasoning governs malformed input: an unrecognized mode, a missing
  * `days` value, or an unreadable stored record all leave the cap unmet.
  *
  * @see docs/data-model.md -> Frequency
@@ -139,7 +139,7 @@ function readRecord( persistent, popupId ) {
 /**
  * Writes a popup's record, swallowing any storage failure.
  *
- * A quota error, a disabled storage area, or a serialisation failure must never
+ * A quota error, a disabled storage area, or a serialization failure must never
  * surface: the visitor has already been shown the popup by the time this runs,
  * and an exception here would abort the caller mid-open.
  *
@@ -183,7 +183,7 @@ function readRecords( popupId ) {
 /**
  * Reports whether a popup's frequency cap currently suppresses it.
  *
- * | Mode               | Storage        | Behaviour                             |
+ * | Mode               | Storage        | Behavior                             |
  * |--------------------|----------------|---------------------------------------|
  * | `always`           | none           | Never suppressed by the mode itself.   |
  * | `once_per_session` | sessionStorage | Suppressed once seen this session.     |
@@ -208,8 +208,8 @@ function readRecords( popupId ) {
  *
  * `until_dismissed` and `until_converted` are not modes and are not handled —
  * both were removed from the spec, the first for describing three incompatible
- * behaviours under one name and the second for being `once_ever` with extra
- * steps. An unrecognised mode leaves the cap unmet.
+ * behaviors under one name and the second for being `once_ever` with extra
+ * steps. An unrecognized mode leaves the cap unmet.
  *
  * @param {number|string}         popupId   Popup identifier.
  * @param {Object|null|undefined} frequency Frequency object from the emitted
@@ -262,7 +262,7 @@ export function isSuppressed( popupId, frequency ) {
 /**
  * Records that a popup was seen.
  *
- * **Call this only after a successful, non-cancelled open** — after
+ * **Call this only after a successful, non-canceled open** — after
  * `popkit:before-open` completed without `preventDefault()` and after the
  * dialog is actually displayed. Never on eligibility, never on arming, never on
  * trigger fire. This is a spec rule, not an implementation detail: an aborted

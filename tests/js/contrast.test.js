@@ -4,13 +4,13 @@
  * This file exists because `tools/contrast.cjs` is load bearing in a way that is
  * easy to miss: every WCAG assertion in `tests/e2e/themes.spec.js` is only as
  * true as the ratio computed here. A transposed coefficient or a missing
- * linearisation step would not throw — it would return a plausible number, and
+ * linearization step would not throw — it would return a plausible number, and
  * twenty-one theme tests would go green against a palette nobody had actually
  * checked.
  *
  * So the expectations below are external reference values, not values this
  * implementation produced. Black on white is 21:1 by definition; `#767676` on
- * white is the grey the WCAG working group cites as the boundary case for 4.5:1;
+ * white is the gray the WCAG working group cites as the boundary case for 4.5:1;
  * the rest are checkable against any published contrast calculator.
  *
  * @see tools/contrast.cjs
@@ -49,14 +49,14 @@ describe( 'parseColor', () => {
 
 	/*
 	 * Every one of these has to come back null rather than a guess. A parser
-	 * that fell back to black would report a passing ratio for a colour it never
+	 * that fell back to black would report a passing ratio for a color it never
 	 * read, which is the failure this whole file is guarding.
 	 */
 	it.each( [
-		[ 'a named colour', 'rebeccapurple' ],
-		[ 'a system colour', 'CanvasText' ],
-		[ 'a modern colour space', 'color(display-p3 1 0 0)' ],
-		[ 'an lab colour', 'lab(50% 40 59.5)' ],
+		[ 'a named color', 'rebeccapurple' ],
+		[ 'a system color', 'CanvasText' ],
+		[ 'a modern color space', 'color(display-p3 1 0 0)' ],
+		[ 'an lab color', 'lab(50% 40 59.5)' ],
 		[ 'a malformed hex', '#12345' ],
 		[ 'a non-hex hex', '#gggggg' ],
 		[ 'an empty string', '' ],
@@ -76,7 +76,7 @@ describe( 'contrastRatio', () => {
 	it.each( [
 		[ 'black on white', '#000000', '#ffffff', 21 ],
 		[ 'white on white', '#ffffff', '#ffffff', 1 ],
-		[ 'the WCAG boundary grey on white', '#767676', '#ffffff', 4.54 ],
+		[ 'the WCAG boundary gray on white', '#767676', '#ffffff', 4.54 ],
 		[ 'pure blue on white', '#0000ff', '#ffffff', 8.59 ],
 		[ 'pure red on white', '#ff0000', '#ffffff', 4 ],
 		[ 'popkit light body text', '#1e1e1e', '#ffffff', 16.67 ],
@@ -95,13 +95,13 @@ describe( 'contrastRatio', () => {
 	/*
 	 * A translucent foreground is composited over the background before
 	 * measuring, because that is what a reader sees. Half-opacity black over
-	 * white is mid-grey, which is nowhere near black-on-white's 21:1.
+	 * white is mid-gray, which is nowhere near black-on-white's 21:1.
 	 *
 	 * The expected value is worked rather than quoted, because the first draft of
 	 * this test quoted a remembered one and was wrong by a third:
 	 *
 	 *   composite  0 x 0.5 + 255 x 0.5      = 127.5, i.e. #808080
-	 *   linearise  ((0.5 + 0.055) / 1.055)^2.4 = 0.2140
+	 *   linearize  ((0.5 + 0.055) / 1.055)^2.4 = 0.2140
 	 *   ratio      (1.0 + 0.05) / (0.2140 + 0.05) = 3.98
 	 *
 	 * Being caught by this is the point of the file. An invented expectation that

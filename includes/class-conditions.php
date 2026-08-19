@@ -75,7 +75,7 @@ final class Conditions {
 	 */
 	public function register( Condition $condition ): void {
 		/*
-		 * Defence in depth. A well-formed Condition cannot carry an empty key,
+		 * Defense in depth. A well-formed Condition cannot carry an empty key,
 		 * but the registry is what the rest of the plugin indexes by that key,
 		 * so it refuses to hold one rather than trusting its caller.
 		 */
@@ -103,7 +103,7 @@ final class Conditions {
 	/**
 	 * Returns a registered condition by key.
 	 *
-	 * Returning `null` for an unrecognised key is the normal case, not an error:
+	 * Returning `null` for an unrecognized key is the normal case, not an error:
 	 * a rule may reference a condition whose plugin is deactivated, and callers
 	 * are required to handle that by deferring on the server and failing closed
 	 * on the client.

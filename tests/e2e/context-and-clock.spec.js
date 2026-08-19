@@ -36,7 +36,7 @@
  *   which is exactly what these tests assert cannot happen.
  *
  * The `Date` shim is written out twice rather than shared, because the two
- * injection points are genuinely different: one is serialised into an init script
+ * injection points are genuinely different: one is serialized into an init script
  * that runs before the document has any scripts, the other is evaluated in a page
  * that is already running. Passing one implementation between them would mean
  * shipping source as a string and evaluating it, which is a worse trade than
@@ -227,7 +227,7 @@ const toHhMm = ( minutes ) => {
 };
 
 /**
- * Builds an enabled schedule whose only window is centred on a local time.
+ * Builds an enabled schedule whose only window is centered on a local time.
  *
  * `days` is empty, which `docs/data-model.md` -> Schedule defines as every day,
  * so a window that happens to cross midnight still resolves the same way however

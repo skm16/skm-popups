@@ -13,7 +13,7 @@
  * why there is no `serverTime` in the emitted config. This file holds it in
  * three independent ways, because each one alone has a blind spot:
  *
- * 1. **Behavioural.** Render the same URL for several visitors who differ in
+ * 1. **Behavioral.** Render the same URL for several visitors who differ in
  *    every input a rendering decision could plausibly be built on, and compare
  *    the emitted bytes. This catches a violation wherever it lives, including in
  *    code this file has never heard of — but only if a fixture happens to
@@ -46,9 +46,9 @@
  *
  * `$_SERVER` is the one input that is partly allowed: `REQUEST_URI` is the URL,
  * which is exactly what a server condition may depend on, while `HTTP_REFERER`,
- * `HTTP_USER_AGENT` and their neighbours are the visitor. The scan therefore
+ * `HTTP_USER_AGENT` and their neighbors are the visitor. The scan therefore
  * reads the index rather than the variable, and a non-literal index — which could
- * resolve to anything at runtime — is an offence in its own right.
+ * resolve to anything at runtime — is an offense in its own right.
  *
  * @package Popkit
  */
@@ -167,7 +167,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	/**
 	 * Classes a file under includes/conditions/ may not instantiate.
 	 *
-	 * Constructed with no argument, each reads the system clock — the same offence
+	 * Constructed with no argument, each reads the system clock — the same offense
 	 * as calling `time()`, written as an object.
 	 *
 	 * @var string[]
@@ -358,7 +358,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	 * eventually receive from a cache having had it computed for somebody else.
 	 *
 	 * The whole emitted output is compared, not only the config JSON: the popup
-	 * markup is where an admin-only edit link, a nonce or a personalised greeting
+	 * markup is where an admin-only edit link, a nonce or a personalized greeting
 	 * would appear, and none of those is in the config at all.
 	 *
 	 * @return void
@@ -480,10 +480,10 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The timestamp scan recognises a clock reading, and leaves ordinary values alone.
+	 * The timestamp scan recognizes a clock reading, and leaves ordinary values alone.
 	 *
 	 * The scan above walks a config that is expected to be clean, so on its own it
-	 * would pass identically against a detector that recognised nothing at all —
+	 * would pass identically against a detector that recognized nothing at all —
 	 * and against a walker that never descended past the first level. Both halves
 	 * are pinned here: the detector is driven with values it must catch and values
 	 * it must not, and the walker is asserted to reach a key nested three levels
@@ -506,7 +506,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 		foreach ( $caught as $label => $value ) {
 			$this->assertTrue(
 				$this->looks_like_a_clock_reading( $value ),
-				sprintf( 'The timestamp scan does not recognise %s, so it would not notice one reaching the emitted config.', $label )
+				sprintf( 'The timestamp scan does not recognize %s, so it would not notice one reaching the emitted config.', $label )
 			);
 		}
 
@@ -620,7 +620,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	 * The tokenizer extension is present.
 	 *
 	 * Every source assertion below is worthless without it, and a scan that cannot
-	 * tokenize returns an empty offence list — indistinguishable from a clean
+	 * tokenize returns an empty offense list — indistinguishable from a clean
 	 * tree. Assert rather than skip: a cache-safety invariant that silently opts
 	 * out of being checked is worse than one that was never written.
 	 *
@@ -671,7 +671,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_no_condition_reads_the_visitor_or_the_clock() {
-		$offences = array();
+		$offenses = array();
 
 		foreach ( self::php_files_under_conditions() as $relative_path ) {
 			$source = file_get_contents( self::plugin_dir() . '/' . $relative_path );
@@ -681,19 +681,19 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 				sprintf( '%s could not be read, so it was never scanned.', $relative_path )
 			);
 
-			$offences = array_merge( $offences, self::offences_in_source( $source, $relative_path ) );
+			$offenses = array_merge( $offenses, self::offenses_in_source( $source, $relative_path ) );
 		}
 
 		$this->assertSame(
 			array(),
-			$offences,
-			'A condition reads something that varies by visitor or by request. A page cache serves one response per URL, so a server condition may depend only on the URL: everything about the visitor — login state, device, referrer, UTM, visit history — is a Context::Client condition evaluated in the browser, and authoritative time comes from the uncached context route. See docs/CLAUDE.md -> Cache safety. Offences:'
-				. PHP_EOL . implode( PHP_EOL, $offences )
+			$offenses,
+			'A condition reads something that varies by visitor or by request. A page cache serves one response per URL, so a server condition may depend only on the URL: everything about the visitor — login state, device, referrer, UTM, visit history — is a Context::Client condition evaluated in the browser, and authoritative time comes from the uncached context route. See docs/CLAUDE.md -> Cache safety. Offenses:'
+				. PHP_EOL . implode( PHP_EOL, $offenses )
 		);
 	}
 
 	/**
-	 * The scan recognises each banned construct, and says where it is.
+	 * The scan recognizes each banned construct, and says where it is.
 	 *
 	 * A guard nobody has watched fail is a guess. Each snippet below is a real
 	 * violation written the way somebody would actually write it, and the
@@ -707,11 +707,11 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_the_scan_detects_every_banned_construct( $snippet, $message ) {
-		$offences = self::offences_in_source( $snippet, 'includes/conditions/class-fixture.php' );
+		$offenses = self::offenses_in_source( $snippet, 'includes/conditions/class-fixture.php' );
 
-		$this->assertCount( 1, $offences, $message );
-		$this->assertStringContainsString( 'includes/conditions/class-fixture.php', $offences[0], 'A failure must name the offending file.' );
-		$this->assertStringContainsString( ':2', $offences[0], 'A failure must name the offending line.' );
+		$this->assertCount( 1, $offenses, $message );
+		$this->assertStringContainsString( 'includes/conditions/class-fixture.php', $offenses[0], 'A failure must name the offending file.' );
+		$this->assertStringContainsString( ':2', $offenses[0], 'A failure must name the offending line.' );
 	}
 
 	/**
@@ -759,7 +759,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 			),
 			'clock as an object' => array(
 				"<?php\n\$now = new DateTimeImmutable();\n",
-				'The scan missed a clock read written as an object. Constructed with no argument it reads the system clock, which is the same offence as time() in a different shape.',
+				'The scan missed a clock read written as an object. Constructed with no argument it reads the system clock, which is the same offense as time() in a different shape.',
 			),
 			'cookie'             => array(
 				"<?php\n\$token = \$_COOKIE['wordpress_logged_in'] ?? '';\n",
@@ -785,14 +785,14 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Prose, string literals and same-named methods are not offences.
+	 * Prose, string literals and same-named methods are not offenses.
 	 *
 	 * This is the half that keeps the invariant documentable. The docblocks in
 	 * includes/conditions/ name every banned input in order to explain why it is
 	 * banned — that is the reviewable property the whole rule rests on — and a
 	 * guard that punished writing them would guarantee they were what got deleted.
 	 *
-	 * `$_SERVER['REQUEST_URI']` appears here too, and its absence from the offence
+	 * `$_SERVER['REQUEST_URI']` appears here too, and its absence from the offense
 	 * list is not an oversight: the request target *is* the URL, which is the one
 	 * thing a server condition is allowed to depend on. A guard that forbade it
 	 * would forbid `url_path`.
@@ -827,7 +827,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(),
-			self::offences_in_source( $snippet, 'includes/conditions/class-fixture.php' ),
+			self::offenses_in_source( $snippet, 'includes/conditions/class-fixture.php' ),
 			'The scan flagged prose, a string literal, a permitted $_SERVER read, or a method that merely shares a name with a banned function. A guard that punishes documenting the invariant guarantees the documentation is what gets removed, and one that forbids reading REQUEST_URI forbids the url_path condition.'
 		);
 	}
@@ -835,7 +835,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	/**
 	 * Returns the offending constructs in one PHP source string.
 	 *
-	 * Only `token_get_all()` decides what is code. Three shapes are offences:
+	 * Only `token_get_all()` decides what is code. Three shapes are offenses:
 	 *
 	 * - an identifier naming a forbidden function, followed by `(`, not preceded
 	 *   by `->`, `?->`, `::`, `function` or `const`
@@ -849,10 +849,10 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	 *
 	 * @param string $source PHP source, including the opening tag.
 	 * @param string $label  Path to name in the message, relative to the plugin root.
-	 * @return string[] One human-readable sentence per offence; empty when there are none.
+	 * @return string[] One human-readable sentence per offense; empty when there are none.
 	 */
-	private static function offences_in_source( $source, $label ) {
-		$offences = array();
+	private static function offenses_in_source( $source, $label ) {
+		$offenses = array();
 		$tokens   = token_get_all( $source );
 		$total    = count( $tokens );
 
@@ -864,10 +864,10 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 			}
 
 			if ( T_VARIABLE === $token[0] ) {
-				$offence = self::superglobal_offence( $tokens, $index, $label );
+				$offense = self::superglobal_offense( $tokens, $index, $label );
 
-				if ( '' !== $offence ) {
-					$offences[] = $offence;
+				if ( '' !== $offense ) {
+					$offenses[] = $offense;
 				}
 
 				continue;
@@ -883,7 +883,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 
 			if ( T_NEW === $prefix ) {
 				if ( in_array( $name, self::FORBIDDEN_CLASSES, true ) ) {
-					$offences[] = sprintf( '  %1$s:%2$d instantiates %3$s, which reads the system clock', $label, (int) $token[2], $name );
+					$offenses[] = sprintf( '  %1$s:%2$d instantiates %3$s, which reads the system clock', $label, (int) $token[2], $name );
 				}
 
 				continue;
@@ -903,17 +903,17 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 				continue;
 			}
 
-			$offences[] = sprintf( '  %1$s:%2$d calls %3$s()', $label, (int) $token[2], $name );
+			$offenses[] = sprintf( '  %1$s:%2$d calls %3$s()', $label, (int) $token[2], $name );
 		}
 
-		return $offences;
+		return $offenses;
 	}
 
 	/**
-	 * Returns the offence a superglobal read represents, or an empty string.
+	 * Returns the offense a superglobal read represents, or an empty string.
 	 *
 	 * `$_SERVER` is the only partly-permitted one, so it is the only one whose
-	 * index is examined. An index that is not a literal string is an offence in
+	 * index is examined. An index that is not a literal string is an offense in
 	 * itself: the allowlist works by index, and an index resolved at runtime
 	 * cannot be checked at scan time.
 	 *
@@ -922,7 +922,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	 * @param string $label  Path to name in the message.
 	 * @return string One human-readable sentence, or an empty string when the read is permitted.
 	 */
-	private static function superglobal_offence( array $tokens, $index, $label ) {
+	private static function superglobal_offense( array $tokens, $index, $label ) {
 		$name = (string) $tokens[ $index ][1];
 		$line = (int) $tokens[ $index ][2];
 
@@ -973,7 +973,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	 * @param array $tokens    Tokens as returned by token_get_all().
 	 * @param int   $from      Index to start from; not itself considered.
 	 * @param int   $direction 1 to look forwards, -1 to look backwards.
-	 * @return int|null Index of the neighbouring significant token, or null at the end of the run.
+	 * @return int|null Index of the neighboring significant token, or null at the end of the run.
 	 */
 	private static function significant_index( array $tokens, $from, $direction ) {
 		$skippable = array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT );
@@ -992,7 +992,7 @@ final class Test_Popkit_Cache_Safety extends WP_UnitTestCase {
 	/**
 	 * Returns every PHP file under the scanned directory, as forward-slashed relative paths.
 	 *
-	 * Sorted, so a failure lists offences in the same order on every machine.
+	 * Sorted, so a failure lists offenses in the same order on every machine.
 	 *
 	 * @return string[] Paths relative to the plugin root.
 	 */

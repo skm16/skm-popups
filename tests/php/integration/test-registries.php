@@ -641,7 +641,7 @@ final class Test_Popkit_Registries extends WP_UnitTestCase {
 	 *
 	 * A fixture is correct here for a different reason than on
 	 * {@see Test_Popkit_Registries::sample_condition()}: the tests using this one
-	 * assert the behaviour of the *container* — storage, retrieval, registration
+	 * assert the behavior of the *container* — storage, retrieval, registration
 	 * order, the copy `all()` hands out, and the refusal of a duplicate key — and a
 	 * container behaves identically whatever is put into it. Filling those
 	 * registries with the real built-ins would tie an assertion about `all()` to

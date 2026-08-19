@@ -46,7 +46,7 @@
  * purposes permanently, and a query string that changes without a page load is
  * an application-router case this plugin has no business inferring intent from.
  *
- * ## Which side is normalised, and why it is the slug
+ * ## Which side is normalized, and why it is the slug
  *
  * The two sides of the comparison do not arrive in the same alphabet. WordPress
  * stores a slug that is not plain ASCII percent-encoded in `post_name`, so a
@@ -58,16 +58,16 @@
  * fragment. Comparing those two directly can never match, in either form, for
  * any popup whose slug is not already ASCII.
  *
- * So the **slug** is normalised to the URL's alphabet rather than the reverse:
+ * So the **slug** is normalized to the URL's alphabet rather than the reverse:
  * it is decoded exactly once, at arming, and every later comparison is made
  * against that. Each side is then one decode from its own storage — the URL from
- * the wire, the slug from `post_name` — which is the single normalised form.
+ * the wire, the slug from `post_name` — which is the single normalized form.
  *
- * Normalising the other way was the alternative: re-encode the URL value and
+ * Normalizing the other way was the alternative: re-encode the URL value and
  * compare the encoded strings. It was rejected because `encodeURIComponent()`
  * does not reproduce what `sanitize_title()` writes — it emits uppercase hex
  * where WordPress emits lowercase, and it leaves `.` and `~` alone where
- * WordPress does not — so the comparison would need a second normalising pass
+ * WordPress does not — so the comparison would need a second normalizing pass
  * over its own output to be trusted, and would still be re-deriving a server
  * encoding in the client.
  *
@@ -142,7 +142,7 @@ function decodeOnce( value ) {
  * Reports whether the current URL names this popup.
  *
  * Takes the slug already decoded once — see the file header for which side is
- * normalised and why — because both URL forms are read decoded and a slug that
+ * normalized and why — because both URL forms are read decoded and a slug that
  * is not plain ASCII is stored encoded.
  *
  * Both comparisons are equality against the whole value, never a prefix or a
@@ -205,7 +205,7 @@ export default {
 			return noop;
 		}
 
-		// Normalised once, here, rather than on every check: the slug cannot
+		// Normalized once, here, rather than on every check: the slug cannot
 		// change, and `hashchange` can run this many times on one page view.
 		const target = decodeOnce( slug );
 

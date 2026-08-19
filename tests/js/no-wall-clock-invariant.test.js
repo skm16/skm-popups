@@ -17,7 +17,7 @@
  * names the missing check outright: "a repository-wide grep asserts `Date.now()`
  * does not appear in the schedule evaluation module". This file is that check.
  *
- * It is modelled on tests/php/unit/test-no-regex-invariant.php, which enforces
+ * It is modeled on tests/php/unit/test-no-regex-invariant.php, which enforces
  * the no-PCRE invariant over includes/ with PHP's own tokenizer, and it makes the
  * same two design choices for the same two reasons.
  *
@@ -33,11 +33,11 @@
  *
  * **Why the scan is checked against fail-open.** A stripper that silently
  * over-consumed — an unterminated literal, a `/` misread as the start of a
- * regular expression — would blank the rest of the file and report zero offences,
- * which is indistinguishable from a clean module. Three defences: template
+ * regular expression — would blank the rest of the file and report zero offenses,
+ * which is indistinguishable from a clean module. Three defenses: template
  * substitutions are scanned as code rather than blanked with the text around
  * them, a candidate regular expression that does not close on its own line is
- * treated as division instead, and the tests below assert that recognisable code
+ * treated as division instead, and the tests below assert that recognizable code
  * survives the strip in every guarded module.
  *
  * **Scope.** The two modules on the schedule path. `src/frontend/frequency.js`
@@ -142,7 +142,7 @@ function isSpace( char ) {
 /**
  * Overwrites a range with spaces, preserving newlines.
  *
- * Newlines survive so that offence line numbers refer to the original file, and
+ * Newlines survive so that offense line numbers refer to the original file, and
  * the blanked source stays the same length as its input so every index computed
  * from one is valid in the other.
  *
@@ -291,7 +291,7 @@ function startsRegexLiteral( out, slashAt ) {
  * A literal cannot span a line, so a candidate that reaches a newline unclosed
  * was a division after all. Returning `start + 1` in that case leaves the slash
  * as code and blanks nothing, which is the safe direction: over-consuming would
- * blank real code and hide an offence.
+ * blank real code and hide an offense.
  *
  * @param {string}   source Original source.
  * @param {string[]} out    Mutable character array being blanked in place.
@@ -461,7 +461,7 @@ function stripNonCode( source ) {
  * Reports whether an exact identifier sits at an index, on identifier boundaries.
  *
  * The boundary check is what keeps `myDate.now()` and `Date.nowhere` out of the
- * offence list while `window.Date.now()` stays in it: `.` is not an identifier
+ * offense list while `window.Date.now()` stays in it: `.` is not an identifier
  * character, so a qualified read is still a boundary-clean occurrence of `Date`.
  *
  * @param {string} code  Blanked source.
@@ -534,7 +534,7 @@ function lineAt( code, index ) {
 /**
  * Returns the wall-clock reads in one JavaScript source string.
  *
- * Three constructs read the device clock and all three are offences: `Date.now`,
+ * Three constructs read the device clock and all three are offenses: `Date.now`,
  * which is the one the build plan names and the only one anybody writes on
  * purpose; `new Date()` with no arguments, which is the same read wearing a
  * constructor; and a bare `Date()` call, which returns the current time as a
@@ -549,11 +549,11 @@ function lineAt( code, index ) {
  *
  * @param {string} source JavaScript source.
  * @param {string} label  Path to name in the message, relative to the plugin root.
- * @return {string[]} One human-readable sentence per offence; empty when there are none.
+ * @return {string[]} One human-readable sentence per offense; empty when there are none.
  */
-function offencesInSource( source, label ) {
+function offensesInSource( source, label ) {
 	const code = stripNonCode( source );
-	const offences = [];
+	const offenses = [];
 
 	for ( let index = 0; index < code.length; index++ ) {
 		if ( ! isWordAt( code, index, 'Date' ) ) {
@@ -576,7 +576,7 @@ function offencesInSource( source, label ) {
 		}
 
 		if ( null !== spelling ) {
-			offences.push(
+			offenses.push(
 				`  ${ label }:${ lineAt(
 					code,
 					index
@@ -585,7 +585,7 @@ function offencesInSource( source, label ) {
 		}
 	}
 
-	return offences;
+	return offenses;
 }
 
 /**
@@ -611,7 +611,7 @@ describe( 'no-wall-clock invariant', () => {
 
 	it( 'leaves real code behind in every guarded module', () => {
 		// The fail-open this file most needs to rule out: a stripper that
-		// over-consumed reports no offences and looks exactly like clean source.
+		// over-consumed reports no offenses and looks exactly like clean source.
 		for ( const relativePath of GUARDED_MODULES ) {
 			expect( stripNonCode( readModule( relativePath ) ) ).toContain(
 				CODE_LANDMARKS[ relativePath ]
@@ -620,13 +620,13 @@ describe( 'no-wall-clock invariant', () => {
 	} );
 
 	it( 'finds no wall-clock read in any guarded module', () => {
-		const offences = GUARDED_MODULES.flatMap( ( relativePath ) =>
-			offencesInSource( readModule( relativePath ), relativePath )
+		const offenses = GUARDED_MODULES.flatMap( ( relativePath ) =>
+			offensesInSource( readModule( relativePath ), relativePath )
 		);
 
 		// This is the invariant. Everything else in the file exists to make this
 		// assertion trustworthy.
-		expect( offences ).toEqual( [] );
+		expect( offenses ).toEqual( [] );
 	} );
 
 	it( 'does not trip on the sentence in clock.js that explains the ban', () => {
@@ -638,7 +638,7 @@ describe( 'no-wall-clock invariant', () => {
 		expect( source ).toContain(
 			'`Date.now()` appears nowhere in this file'
 		);
-		expect( offencesInSource( source, 'src/frontend/clock.js' ) ).toEqual(
+		expect( offensesInSource( source, 'src/frontend/clock.js' ) ).toEqual(
 			[]
 		);
 	} );
@@ -648,15 +648,15 @@ describe( 'no-wall-clock invariant', () => {
 			'const schedule = config.schedule;\n' +
 			'const nowMs = Date.now();\n';
 
-		const offences = offencesInSource(
+		const offenses = offensesInSource(
 			snippet,
 			'src/frontend/schedule.js'
 		);
 
-		expect( offences ).toHaveLength( 1 );
-		expect( offences[ 0 ] ).toContain( 'src/frontend/schedule.js' );
-		expect( offences[ 0 ] ).toContain( ':2' );
-		expect( offences[ 0 ] ).toContain( 'Date.now' );
+		expect( offenses ).toHaveLength( 1 );
+		expect( offenses[ 0 ] ).toContain( 'src/frontend/schedule.js' );
+		expect( offenses[ 0 ] ).toContain( ':2' );
+		expect( offenses[ 0 ] ).toContain( 'Date.now' );
 	} );
 
 	it( 'detects every spelling of a wall-clock read', () => {
@@ -675,8 +675,8 @@ describe( 'no-wall-clock invariant', () => {
 		for ( const spelling of spellings ) {
 			expect( {
 				spelling,
-				offences: offencesInSource( spelling, 'fixture.js' ).length,
-			} ).toEqual( { spelling, offences: 1 } );
+				offenses: offensesInSource( spelling, 'fixture.js' ).length,
+			} ).toEqual( { spelling, offenses: 1 } );
 		}
 	} );
 
@@ -700,7 +700,7 @@ describe( 'no-wall-clock invariant', () => {
 			'const midpoint = ( sentAtMs + receivedAtMs ) / 2;',
 		].join( '\n' );
 
-		expect( offencesInSource( snippet, 'fixture.js' ) ).toEqual( [] );
+		expect( offensesInSource( snippet, 'fixture.js' ) ).toEqual( [] );
 	} );
 
 	it( 'does not let a division hide the code that follows it', () => {
@@ -710,6 +710,6 @@ describe( 'no-wall-clock invariant', () => {
 		const snippet =
 			'const half = total / 2;\n' + 'const nowMs = Date.now();\n';
 
-		expect( offencesInSource( snippet, 'fixture.js' ) ).toHaveLength( 1 );
+		expect( offensesInSource( snippet, 'fixture.js' ) ).toHaveLength( 1 );
 	} );
 } );

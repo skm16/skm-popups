@@ -167,7 +167,7 @@ The controller, with no triggers or conditions wired yet. Opens on load only.
 - Schedule evaluation against the corrected clock
 - Frequency capping via browser storage, wrapped in try/catch
 - `popkit:before-open` (cancelable), `popkit:open`, `popkit:close` events
-- Seen recorded only after a successful, non-cancelled open
+- Seen recorded only after a successful, non-canceled open
 - `window.popkit.open(slug)` / `.close(slug)` programmatic API
 
 **Exit criteria**

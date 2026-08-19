@@ -182,9 +182,11 @@ function Triggers( { registry } ) {
 /**
  * The schedule panel.
  *
+ * @param {Object} props            Props.
+ * @param {Object} props.vocabulary Label maps from the registry.
  * @return {JSX.Element} Panel.
  */
-function Schedule() {
+function Schedule( { vocabulary } ) {
 	const [ schedule, setSchedule ] = useMeta( META.SCHEDULE );
 
 	return (
@@ -193,7 +195,11 @@ function Schedule() {
 			title={ __( 'Popup schedule', 'popkit' ) }
 			className="popkit-panel"
 		>
-			<SchedulePanel schedule={ schedule } onChange={ setSchedule } />
+			<SchedulePanel
+				schedule={ schedule }
+				onChange={ setSchedule }
+				vocabulary={ vocabulary }
+			/>
 		</PluginDocumentSettingPanel>
 	);
 }
@@ -201,9 +207,11 @@ function Schedule() {
 /**
  * The frequency panel.
  *
+ * @param {Object} props            Props.
+ * @param {Object} props.vocabulary Label maps from the registry.
  * @return {JSX.Element} Panel.
  */
-function Frequency() {
+function Frequency( { vocabulary } ) {
 	const [ frequency, setFrequency ] = useMeta( META.FREQUENCY );
 
 	return (
@@ -212,7 +220,11 @@ function Frequency() {
 			title={ __( 'Popup frequency', 'popkit' ) }
 			className="popkit-panel"
 		>
-			<FrequencyPanel frequency={ frequency } onChange={ setFrequency } />
+			<FrequencyPanel
+				frequency={ frequency }
+				onChange={ setFrequency }
+				vocabulary={ vocabulary }
+			/>
 		</PluginDocumentSettingPanel>
 	);
 }
@@ -220,9 +232,11 @@ function Frequency() {
 /**
  * The appearance panel.
  *
+ * @param {Object} props            Props.
+ * @param {Object} props.vocabulary Label maps from the registry.
  * @return {JSX.Element} Panel.
  */
-function Display() {
+function Display( { vocabulary } ) {
 	const [ display, setDisplay ] = useMeta( META.DISPLAY );
 
 	return (
@@ -231,7 +245,11 @@ function Display() {
 			title={ __( 'Popup appearance', 'popkit' ) }
 			className="popkit-panel"
 		>
-			<DisplayPanel display={ display } onChange={ setDisplay } />
+			<DisplayPanel
+				display={ display }
+				onChange={ setDisplay }
+				vocabulary={ vocabulary }
+			/>
 		</PluginDocumentSettingPanel>
 	);
 }
@@ -296,9 +314,9 @@ function PopupSidebar() {
 		<Fragment>
 			<Targeting registry={ registry } />
 			<Triggers registry={ registry } />
-			<Schedule />
-			<Frequency />
-			<Display />
+			<Schedule vocabulary={ registry.vocabulary } />
+			<Frequency vocabulary={ registry.vocabulary } />
+			<Display vocabulary={ registry.vocabulary } />
 		</Fragment>
 	);
 }

@@ -67,7 +67,7 @@ final class Test_Popkit_Server_Conditions extends WP_UnitTestCase {
 	private const REJECTED = 'decided false';
 
 	/**
-	 * Verdict: the rule was not decided, so it travelled to the client to be failed closed.
+	 * Verdict: the rule was not decided, so it traveled to the client to be failed closed.
 	 *
 	 * @var string
 	 */
@@ -708,8 +708,8 @@ final class Test_Popkit_Server_Conditions extends WP_UnitTestCase {
 		return array(
 			'exact hit'             => array( 'exact', '/campaigns/spring-appeal/', self::MATCHED, 'An exact url_path rule did not match the path it names.' ),
 			'exact miss'            => array( 'exact', '/campaigns/', self::REJECTED, 'An exact url_path rule matched a path it does not name. Exact is not a prefix.' ),
-			'exact ignores case'    => array( 'exact', '/CAMPAIGNS/Spring-Appeal/', self::MATCHED, 'An exact url_path rule failed on case alone. Comparison is case-insensitive, which is what stops a rule from silently missing a link somebody capitalised.' ),
-			'trailing slash counts' => array( 'exact', '/campaigns/spring-appeal', self::REJECTED, 'An exact url_path rule matched a path differing by its trailing slash. The normaliser preserves one, so /about and /about/ are different paths and reconciling them is the author\'s decision rather than a silent rewrite.' ),
+			'exact ignores case'    => array( 'exact', '/CAMPAIGNS/Spring-Appeal/', self::MATCHED, 'An exact url_path rule failed on case alone. Comparison is case-insensitive, which is what stops a rule from silently missing a link somebody capitalized.' ),
+			'trailing slash counts' => array( 'exact', '/campaigns/spring-appeal', self::REJECTED, 'An exact url_path rule matched a path differing by its trailing slash. The normalizer preserves one, so /about and /about/ are different paths and reconciling them is the author\'s decision rather than a silent rewrite.' ),
 			'prefix hit'            => array( 'prefix', '/campaigns/', self::MATCHED, 'A prefix url_path rule did not match a path beginning with its value.' ),
 			'prefix miss'           => array( 'prefix', '/appeals/', self::REJECTED, 'A prefix url_path rule matched a path that does not begin with its value.' ),
 			'contains hit'          => array( 'contains', 'spring', self::MATCHED, 'A contains url_path rule did not match a path holding its value.' ),
@@ -766,7 +766,7 @@ final class Test_Popkit_Server_Conditions extends WP_UnitTestCase {
 					'value' => '/campaigns/spring-appeal/?utm_source=email',
 				)
 			),
-			'A url_path rule whose value carries a query string matched. The subject is the normalised path only — no scheme, host, query string or fragment — so there is nothing for such a value to equal.'
+			'A url_path rule whose value carries a query string matched. The subject is the normalized path only — no scheme, host, query string or fragment — so there is nothing for such a value to equal.'
 		);
 	}
 

@@ -11,6 +11,7 @@ namespace Popkit\Conditions;
 use Popkit\Condition;
 use Popkit\Context;
 use Popkit\Url_Matcher;
+use Popkit\Vocabulary;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -373,11 +374,15 @@ final class Client_Conditions {
 			__( 'Login state', 'popkit' ),
 			array(
 				'state' => array(
-					'type'    => 'enum',
-					'enum'    => array( self::STATE_LOGGED_IN, self::STATE_LOGGED_OUT ),
-					'default' => self::STATE_LOGGED_IN,
-					'label'   => __( 'Whether the visitor is signed in', 'popkit' ),
-					'control' => 'select',
+					'type'        => 'enum',
+					'enum'        => array( self::STATE_LOGGED_IN, self::STATE_LOGGED_OUT ),
+					'enum_labels' => array(
+						self::STATE_LOGGED_IN  => __( 'Signed in', 'popkit' ),
+						self::STATE_LOGGED_OUT => __( 'Signed out', 'popkit' ),
+					),
+					'default'     => self::STATE_LOGGED_IN,
+					'label'       => __( 'Whether the visitor is signed in', 'popkit' ),
+					'control'     => 'select',
 				),
 			)
 		);
@@ -412,11 +417,12 @@ final class Client_Conditions {
 			__( 'Referrer', 'popkit' ),
 			array(
 				'match' => array(
-					'type'    => 'enum',
-					'enum'    => Url_Matcher::modes(),
-					'default' => 'exact',
-					'label'   => __( 'How the referrer is compared', 'popkit' ),
-					'control' => 'select',
+					'type'        => 'enum',
+					'enum'        => Url_Matcher::modes(),
+					'enum_labels' => Vocabulary::url_match_modes(),
+					'default'     => 'exact',
+					'label'       => __( 'How the referrer is compared', 'popkit' ),
+					'control'     => 'select',
 				),
 				'value' => array(
 					'type'       => 'string',
@@ -499,11 +505,15 @@ final class Client_Conditions {
 			__( 'Visit history', 'popkit' ),
 			array(
 				'state' => array(
-					'type'    => 'enum',
-					'enum'    => array( self::VISIT_FIRST_TIME, self::VISIT_RETURNING ),
-					'default' => self::VISIT_FIRST_TIME,
-					'label'   => __( 'Whether this is the visitor\'s first visit', 'popkit' ),
-					'control' => 'select',
+					'type'        => 'enum',
+					'enum'        => array( self::VISIT_FIRST_TIME, self::VISIT_RETURNING ),
+					'enum_labels' => array(
+						self::VISIT_FIRST_TIME => __( 'First-time visitor', 'popkit' ),
+						self::VISIT_RETURNING  => __( 'Returning visitor', 'popkit' ),
+					),
+					'default'     => self::VISIT_FIRST_TIME,
+					'label'       => __( 'Whether this is the visitor\'s first visit', 'popkit' ),
+					'control'     => 'select',
 				),
 			)
 		);

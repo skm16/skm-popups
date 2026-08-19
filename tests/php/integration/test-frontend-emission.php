@@ -290,7 +290,7 @@ final class Test_Popkit_Frontend_Emission extends WP_UnitTestCase {
 		$this->assertSame(
 			array(),
 			Frontend::matched_popups(),
-			'Fixture: neither a draft nor a password-protected popup may survive server evaluation. A password gate reads a cookie, so honouring it would vary the cached response by visitor; dropping the popup is what fails closed.'
+			'Fixture: neither a draft nor a password-protected popup may survive server evaluation. A password gate reads a cookie, so honoring it would vary the cached response by visitor; dropping the popup is what fails closed.'
 		);
 
 		ob_start();
@@ -398,7 +398,7 @@ final class Test_Popkit_Frontend_Emission extends WP_UnitTestCase {
 					'timezone' => 'site',
 				),
 				true,
-				'needsContext was not set for a popup with an enabled schedule. The client then has no authoritative clock, so every scheduled popup fails closed and never shows — correct behaviour applied to a question that should never have been asked. There is no serverTime in the config to fall back on, and there must not be.',
+				'needsContext was not set for a popup with an enabled schedule. The client then has no authoritative clock, so every scheduled popup fails closed and never shows — correct behavior applied to a question that should never have been asked. There is no serverTime in the config to fall back on, and there must not be.',
 			),
 			'a user_state rule needs the login state' => array(
 				Meta::CONDITIONS,

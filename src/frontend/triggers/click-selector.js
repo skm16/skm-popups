@@ -20,7 +20,7 @@
  * counts. A visitor who clicked the `<span>` inside a themed `<button>` clicked
  * the button, and an author who wrote `.donate-button` meant the button.
  *
- * ## The click is never cancelled
+ * ## The click is never canceled
  *
  * This trigger does not call `preventDefault()`, and the listener is registered
  * `passive` so that it could not if it tried. The visitor clicked something
@@ -57,7 +57,7 @@
  * other reason — the click is not modified — so the ordering costs the page
  * nothing.
  *
- * `passive: true` is a promise rather than an optimisation. `click` is not a
+ * `passive: true` is a promise rather than an optimization. `click` is not a
  * scroll-blocking event, so the flag buys no scrolling performance; what it
  * buys is that "this trigger never cancels the click" becomes something the
  * browser enforces instead of something a comment asserts.

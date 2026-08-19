@@ -450,7 +450,7 @@ final class Test_Popkit_Condition extends TestCase {
 				'The popkit condition `' . self::OWNER_KEY . '`',
 				'must declare a non-empty label',
 			),
-			'An unlabelled condition is an accessibility failure, so it must be refused at registration rather than rendered nameless.'
+			'An unlabeled condition is an accessibility failure, so it must be refused at registration rather than rendered nameless.'
 		);
 	}
 

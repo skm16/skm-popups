@@ -12,7 +12,7 @@
  * sits on the popup root and the tokens are inherited down to the container, so
  * a theme never needs to know which element paints the surface.
  *
- * ## Every colour pair here was measured, not chosen
+ * ## Every color pair here was measured, not chosen
  *
  * The ratios below were computed with `tools/contrast.cjs` before the values
  * were written down, and `tests/e2e/themes.spec.js` re-measures them against
@@ -34,7 +34,7 @@
  *
  * ## Why the three shipped themes are opaque
  *
- * `--popkit-surface` is a solid colour in every shipped theme, and the contrast
+ * `--popkit-surface` is a solid color in every shipped theme, and the contrast
  * helper refuses a translucent background outright. A popup whose panel is
  * semi-transparent has a text contrast ratio that depends on the article behind
  * it — it passes over a white paragraph and fails over a photograph, on the same
@@ -50,8 +50,8 @@
 /*
  * Light.
  *
- * Also the shape every other theme follows: a surface, a text colour, a muted
- * text colour, a border, a focus ring, and the overlay. Nothing else is
+ * Also the shape every other theme follows: a surface, a text color, a muted
+ * text color, a border, a focus ring, and the overlay. Nothing else is
  * themeable, and that is deliberate — see the file docblock.
  */
 .popkit-popup--theme-light {
@@ -87,8 +87,8 @@
  * Light's palette with a heavy, full-contrast border and no rounding. It exists
  * for themes whose own surfaces are white: a white panel on a white page has no
  * visible edge, and "where does the popup end" stops being obvious. The border
- * is the same colour as the text rather than a grey, because at 2px it reads as
- * a frame and a grey frame at that weight reads as a rendering artifact.
+ * is the same color as the text rather than a gray, because at 2px it reads as
+ * a frame and a gray frame at that weight reads as a rendering artifact.
  */
 .popkit-popup--theme-bordered {
 	--popkit-surface: #fff;
@@ -115,7 +115,7 @@
  * Every `var()` here falls back to `Canvas` / `CanvasText`, the user agent's own
  * pair. Those follow the platform light/dark preference and forced-colors mode,
  * and cannot fail a contrast check against each other. So the failure modes are
- * bounded: a classic theme with no `theme.json` gets the user agent's colours; a
+ * bounded: a classic theme with no `theme.json` gets the user agent's colors; a
  * block theme gets its own.
  *
  * What this mode cannot promise is a *ratio*. A theme is free to declare a base
@@ -126,13 +126,13 @@
  * list. What *is* asserted is that inherit resolves to the theme's presets when
  * they exist and to the user agent pair when they do not.
  *
- * `--popkit-border` derives from the text colour rather than reading a preset,
+ * `--popkit-border` derives from the text color rather than reading a preset,
  * because there is no preset that reliably means "a line you can see". Themes
  * spell it `--wp--preset--color--tertiary`, `--secondary`, `--accent-4`, or not
  * at all, and picking one would produce an invisible border on every theme that
  * uses the name differently. `color-mix()` against the surface gives a line that
  * is always visible and always related to the palette; browsers without it fall
- * back to the full-contrast text colour, which is heavier than intended and
+ * back to the full-contrast text color, which is heavier than intended and
  * never wrong.
  */
 .popkit-popup--theme-inherit {

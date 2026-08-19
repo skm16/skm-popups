@@ -4,7 +4,7 @@
  * `src/frontend/controller.js` owns every fail-closed decision that survives the
  * cache boundary — stages 6 to 10 of `docs/CLAUDE.md` -> Architecture
  * invariants. Each of those decisions is a refusal, and a refusal is the one
- * kind of behaviour an end-to-end test is worst at pinning: a popup that fails
+ * kind of behavior an end-to-end test is worst at pinning: a popup that fails
  * to appear because the guard held and a popup that fails to appear because the
  * runtime threw look identical from the outside.
  *
@@ -28,8 +28,8 @@
  *    popup carrying one stays shut. `negate` is deliberately not applied to that
  *    denial — negating an unresolvable rule would turn "members only" into
  *    "everyone", which is the worst failure this plugin can have.
- * 4. **Seen is recorded after a successful, non-cancelled open, and never
- *    otherwise.** A cancelled open shows the visitor nothing, so recording it
+ * 4. **Seen is recorded after a successful, non-canceled open, and never
+ *    otherwise.** A canceled open shows the visitor nothing, so recording it
  *    would spend their single impression on something they never saw — and the
  *    record carries the frequency object, because the mode decides whether there
  *    is anything to write at all.
@@ -160,7 +160,7 @@ const ORIGINAL_FETCH = window.fetch;
  * Listeners this test attached to `document`, removed again afterwards.
  *
  * jsdom keeps one document for the whole file, so a listener left behind — the
- * veto in the cancellation test above all — would quietly govern every test that
+ * veto in the cancelation test above all — would quietly govern every test that
  * ran after it.
  *
  * @type {Object[]}
@@ -315,7 +315,7 @@ function writeButton() {
 }
 
 /**
- * Dispatches a bubbling, cancellable click, as a visitor's would be.
+ * Dispatches a bubbling, cancelable click, as a visitor's would be.
  *
  * @param {Element} target Element to click.
  * @return {void}
@@ -712,7 +712,7 @@ describe( 'readConfig -> a mangled config costs the site its popups and nothing 
 		[ 'truncated JSON', '{ "popups": [ ' ],
 		[ 'an empty element', '' ],
 		[ 'JSON that is not an object', '"popkit"' ],
-		[ 'HTML injected by an optimiser', '<!-- optimised -->' ],
+		[ 'HTML injected by an optimizer', '<!-- optimized -->' ],
 	] )( 'returns null rather than throwing for %s', async ( label, text ) => {
 		const { boot, readConfig } = await loadController();
 
@@ -721,7 +721,7 @@ describe( 'readConfig -> a mangled config costs the site its popups and nothing 
 
 		let config;
 
-		// A plugin whose config was mangled by an over-eager optimiser must cost
+		// A plugin whose config was mangled by an over-eager optimizer must cost
 		// the site nothing but its own popups. An exception here escapes into
 		// whatever else the page was doing.
 		expect( () => {
@@ -758,7 +758,7 @@ describe( 'readConfig -> a mangled config costs the site its popups and nothing 
 } );
 
 describe( 'openRecord -> when a popup counts as seen', () => {
-	it( 'writes no record when popkit:before-open is cancelled', async () => {
+	it( 'writes no record when popkit:before-open is canceled', async () => {
 		const { boot } = await loadController();
 		const element = writePopup( POPUP_ID, POPUP_SLUG );
 		const events = recordEvents();
@@ -782,7 +782,7 @@ describe( 'openRecord -> when a popup counts as seen', () => {
 		expect( seenRecords() ).toEqual( { local: null, session: null } );
 	} );
 
-	it( 'writes the record when the open is not cancelled', async () => {
+	it( 'writes the record when the open is not canceled', async () => {
 		const { boot } = await loadController();
 
 		writePopup( POPUP_ID, POPUP_SLUG );
@@ -813,7 +813,7 @@ describe( 'openRecord -> when a popup counts as seen', () => {
 
 		/*
 		 * `data-model.md` gives `always` a storage of "none", and the write can
-		 * only honour that if the open tells it the mode — the storage key
+		 * only honor that if the open tells it the mode — the storage key
 		 * carries no copy of one. A record written here is one nothing ever
 		 * reads, and it outlives the setting that produced it: an author
 		 * switching this popup to `once_ever` would find it already suppressed
@@ -866,7 +866,7 @@ describe( 'boot -> stage 10, the triggers the controller armed', () => {
 		boot( configFor( { triggers: [ CLICK_TRIGGER ] } ) );
 		await flush();
 
-		// Armed, and nothing has fired: a configured trigger list is honoured as
+		// Armed, and nothing has fired: a configured trigger list is honored as
 		// written, so this popup does not open on load.
 		expect( element.hidden ).toBe( true );
 
@@ -963,7 +963,7 @@ describe( 'boot -> stage 10, the triggers the controller armed', () => {
 		clickOn( button );
 
 		/*
-		 * A cancelled open settles the popup. Re-arming on a veto would ask a
+		 * A canceled open settles the popup. Re-arming on a veto would ask a
 		 * consent integration the same question on every click, every scroll
 		 * event, and every fire of every sibling trigger — which is the load the
 		 * first-fire-wins latch exists to prevent, and the reason it cannot

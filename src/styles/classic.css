@@ -6,11 +6,40 @@
  * only the structure core has no opinion about: how a group encloses its rules,
  * and how a field's label sits above its control.
  *
- * Nothing here sets a colour. The admin has user-selectable colour schemes and a
+ * Nothing here sets a color. The admin has user-selectable color schemes and a
  * high-contrast mode, and a hard-coded border or background is exactly what
- * breaks in them — so borders reference core's own admin greys through the
+ * breaks in them — so borders reference core's own admin grays through the
  * variables it already publishes, and fall back to a neutral that works in every
- * scheme rather than to a brand colour that works in one.
+ * scheme rather than to a brand color that works in one.
+ *
+ * ## The overflow, and why it was only ever one rule
+ *
+ * Core sizes `.regular-text` at `width: 25em` (`wp-admin/css/forms.css`). That
+ * `em` resolves against the input's own `font-size: 14px`, not the admin's 13px
+ * body, so it is a **definite 350px**. The usable width inside a meta box in the
+ * `side` context — where the Appearance box lives — is about 255px: a 280px
+ * column less the postbox border and `.postbox .inside`'s 12px of horizontal
+ * padding. Every `.regular-text` therefore hung 95px outside its own box and
+ * pushed a horizontal scrollbar onto the whole admin page.
+ *
+ * Nothing else overflowed, and the reason is worth writing down because it
+ * dictates the fix. `.popkit-field` is a column flex container at the default
+ * `align-items: stretch`, so every control with an **auto** width — `select`,
+ * `select[multiple]`, `input[type=range]`, `input[type=number]` — is already
+ * stretched to exactly the container's width. Stretch has no effect on a flex
+ * item with a definite cross size, so `.regular-text` alone kept its 350px.
+ *
+ * So the fix is to give the width back to `auto` and cap it, not to force a
+ * percentage. `width: 100%` was tried and is wrong by exactly 1px: core's
+ * `input, select { margin: 0 1px }` sits outside a percentage width, so the
+ * control ends up 2px wider than its container. `width: auto` lets stretch do
+ * the sizing it was already doing correctly for everything else, and the
+ * `max-width` keeps the control a readable length in the wide column, where the
+ * same field set renders the targeting box and 25em is the right size.
+ *
+ * Core's own guard never fires here: its `max-width: 100%` on `.regular-text` is
+ * inside `@media (max-width: 782px)`, and below 782px WordPress has already
+ * collapsed the two-column layout so there is no side column left to overflow.
  */
 
 .popkit-group {
@@ -46,6 +75,19 @@
 }
 
 /*
+ * Core already sets `box-sizing: border-box` on inputs and selects; these are
+ * the containers it does not, and their padding and borders would otherwise be
+ * added outside the width their parent allows them.
+ */
+.popkit-group,
+.popkit-rule,
+.popkit-trigger,
+.popkit-scope,
+.popkit-field {
+	box-sizing: border-box;
+}
+
+/*
  * Labels sit above their control rather than beside it. A targeting field's
  * label is a sentence — "Path to match, beginning with a slash" — not a word,
  * and a sentence in a table cell beside an input wraps into a column two words
@@ -55,10 +97,24 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.25em;
+	max-width: 100%;
 }
 
 .popkit-field__label {
 	font-weight: 600;
+}
+
+/*
+ * A label is author-facing prose and a condition key is not: a registration may
+ * label a field with something long and unspaced, and a stored URL pattern is
+ * routinely both. Either would otherwise push the meta box wider than its
+ * column with no way for the author to see the rest of it.
+ */
+.popkit-field__label,
+.popkit-scope .description,
+.popkit-field .description {
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 }
 
 /* A toggle's label belongs beside its checkbox, so the flex column is wrong for it. */
@@ -66,15 +122,98 @@
 	display: block;
 }
 
-.popkit-field input[type="range"] {
+/* The one rule that fixes the overflow. See the file header for why. */
+.popkit-field .regular-text {
 	max-width: 25em;
+	width: auto;
 }
 
+/*
+ * `select[multiple]` deliberately declares no max-width. It used to carry
+ * `max-width: 25em`, which out-specified core's own
+ * `.meta-box-sortables select { max-width: 100% }` — so the plugin was removing
+ * the guard core ships to keep a select inside a meta box. Flex stretch sizes it
+ * correctly and core's rule is the backstop; only the height needs saying.
+ */
 .popkit-field select[multiple] {
-	max-width: 25em;
 	min-height: 6em;
 }
 
 .popkit-rule__unavailable {
 	margin: 0.5em 0;
+}
+
+/*
+ * The site-wide choice.
+ *
+ * Each option carries a description under its own label rather than one note
+ * under both, because the consequence of choosing them differs — one of the two
+ * discards the rules — and a shared note cannot say which one it means.
+ */
+.popkit-scope {
+	margin: 0 0 1em;
+	max-width: 100%;
+}
+
+.popkit-scope__legend {
+	font-weight: 600;
+	padding: 0;
+}
+
+.popkit-scope__choice {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15em;
+	margin: 0.5em 0;
+}
+
+/*
+ * The description is indented to the label's text rather than to its radio, so
+ * the two read as one block belonging to that option instead of as a note that
+ * happens to follow it.
+ */
+.popkit-scope__choice .description {
+	margin-left: 1.9em;
+}
+
+/*
+ * The color picker.
+ *
+ * Iris wraps the input in `.wp-picker-container` at runtime and gives the
+ * container no width of its own, so the swatch button and the input beside it
+ * size themselves and overflow a narrow column. Letting the container fill the
+ * field and wrap its own children keeps the picker inside the box at any width.
+ */
+.popkit-field--color .wp-picker-container {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25em;
+	max-width: 100%;
+}
+
+/*
+ * Iris renders the swatch button, the text input and the Clear button as
+ * siblings. The input is the only one that should absorb the leftover space;
+ * the two buttons are sized by their content.
+ */
+.popkit-field--color .wp-picker-input-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25em;
+	max-width: 100%;
+}
+
+.popkit-field--color .wp-color-picker {
+	max-width: 7em;
+	width: 7em;
+}
+
+/*
+ * The palette panel is absolutely sized by Iris and is the one part that cannot
+ * be told to fit. Scrolling it is better than letting it set the width of the
+ * meta box, which is what happens if it is left alone in the side column.
+ */
+.popkit-field--color .wp-picker-holder {
+	max-width: 100%;
+	overflow-x: auto;
 }

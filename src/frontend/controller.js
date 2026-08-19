@@ -82,9 +82,9 @@
  * that stays invisible is indistinguishable from a broken plugin, produces no
  * error anywhere to lead its author to the panel they did not open, and the
  * support question it generates has no good answer. It is also what Phase 2
- * shipped, so no popup changes behaviour on the day triggers land.
+ * shipped, so no popup changes behavior on the day triggers land.
  *
- * A trigger list that is **not** empty is honoured exactly as written, and the
+ * A trigger list that is **not** empty is honored exactly as written, and the
  * two cases are deliberately not merged. A popup whose only configured trigger
  * cannot be armed — an unregistered type left behind by a deactivated extension
  * — stays shut. The author asked for something specific and popkit could not do
@@ -102,7 +102,7 @@
  * Focus, the close button, overlay clicks, Escape, focus return, removal from
  * the document, and modal supersession are all `dialog.js`. Event dispatch is
  * all `events.js`. This file decides *whether* and *when*; it does not decide
- * *how*, and it deliberately owns no DOM behaviour it could get subtly wrong in
+ * *how*, and it deliberately owns no DOM behavior it could get subtly wrong in
  * a second place.
  *
  * @see docs/CLAUDE.md
@@ -153,7 +153,7 @@ const CONTEXT_FIELDS = {
  *
  * The only one in v1. Matched as a literal for the same reason the PHP side
  * matches it as a literal: a rule's `type` is stored verbatim and has to be
- * recognisable whether or not anything has registered a condition under it.
+ * recognizable whether or not anything has registered a condition under it.
  *
  * Read twice, for the two halves of one decision. {@link hasUserStateRule} uses
  * it to work out whether this page must pay for the round trip at all, which is
@@ -294,7 +294,7 @@ let session = null;
  * Total: every failure returns null, and null means "this page has no popkit
  * config", which is the same as a page popkit never touched. A JSON parse
  * failure must not throw into the page — a plugin whose config was mangled by
- * an over-eager optimiser should cost the site nothing but its own popups.
+ * an over-eager optimizer should cost the site nothing but its own popups.
  *
  * @return {Object|null} Parsed config, or null when it is absent or unusable.
  */
@@ -740,7 +740,7 @@ function scheduleAllowsRecord( record, context ) {
  * announced as open and does not consume the visitor's impression.
  *
  * Seen is recorded for a programmatic open too. `docs/data-model.md` conditions
- * the record on a successful, non-cancelled open and on nothing else, and a
+ * the record on a successful, non-canceled open and on nothing else, and a
  * visitor who was shown a popup was shown it however it was summoned.
  *
  * `source` is the element a trigger fired from — the link or button a
@@ -802,7 +802,7 @@ function openRecord( record, programmatic, source ) {
 		 * `showModal()` of a `<div>`.
 		 *
 		 * `close_on_overlay_click` keeps its snake_case because it is a stored
-		 * field name travelling through JSON, not a name this bundle chose. It
+		 * field name traveling through JSON, not a name this bundle chose. It
 		 * requires an overlay to exist, so the two settings are resolved
 		 * together here rather than separately in the dialog module.
 		 */
@@ -833,7 +833,7 @@ function openRecord( record, programmatic, source ) {
 
 	/*
 	 * The frequency object goes with the id. `docs/data-model.md` gives `always`
-	 * a storage of "none", and `recordSeen()` can only honour that if it is told
+	 * a storage of "none", and `recordSeen()` can only honor that if it is told
 	 * the mode — the storage key carries no copy of it. Omitting it writes a
 	 * record nothing reads, which then outlives the setting that produced it: an
 	 * author switching an uncapped popup to `once_ever` would find it already
@@ -956,7 +956,7 @@ function openBySlug( slug ) {
 	 *
 	 * Passing one through as the other would tell an author their slug was wrong
 	 * when what actually happened is that their own `popkit:before-open`
-	 * listener cancelled the open. Collapse to a boolean here: the caller asked
+	 * listener canceled the open. Collapse to a boolean here: the caller asked
 	 * whether the popup opened, and it did not.
 	 */
 	return true === openRecord( record, true );

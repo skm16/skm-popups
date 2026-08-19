@@ -204,7 +204,7 @@ describe( 'scheduleAllows -> campaign range', () => {
 
 	it( 'reads a boundary with no zone designator as UTC', () => {
 		// A local reading would resolve to a different instant for every
-		// visitor, which is the visitor-varying behaviour the plugin forbids.
+		// visitor, which is the visitor-varying behavior the plugin forbids.
 		const schedule = campaign( '2026-11-30T00:00:00', null );
 
 		expect( scheduleAllows( schedule, START - 1, SITE_ZONE ) ).toBe(
@@ -505,7 +505,7 @@ describe( 'scheduleAllows -> timezone handling', () => {
 	} );
 
 	it.each( [
-		[ 'an unrecognised zone', 'Not/AZone' ],
+		[ 'an unrecognized zone', 'Not/AZone' ],
 		[ 'an empty string', '' ],
 		[ 'undefined', undefined ],
 		[ 'null', null ],

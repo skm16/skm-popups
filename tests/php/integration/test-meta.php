@@ -23,11 +23,11 @@
  *   every layout and theme. An overlay click is not an affordance: it is
  *   invisible, has no accessible name, is unreachable by keyboard and is
  *   undiscoverable by screen reader. A stored `close_button` key is therefore
- *   discarded rather than honoured.
+ *   discarded rather than honored.
  * - `frequency.mode` values `until_dismissed` and `until_converted`, and the
- *   `reset_on_convert` key. The first named three different behaviours at once,
+ *   `reset_on_convert` key. The first named three different behaviors at once,
  *   the second was `once_ever` with extra steps, and the third described the
- *   inverse of the useful behaviour — it would have made a visitor who just
+ *   inverse of the useful behavior — it would have made a visitor who just
  *   converted immediately eligible again.
  *
  * @package Popkit
@@ -406,7 +406,7 @@ final class Test_Popkit_Meta extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey(
 			'close_button',
 			Meta::display_schema()['properties'],
-			'The REST schema declares a close_button property. The editor would render a control for a setting that cannot be honoured.'
+			'The REST schema declares a close_button property. The editor would render a control for a setting that cannot be honored.'
 		);
 	}
 
@@ -454,7 +454,7 @@ final class Test_Popkit_Meta extends WP_UnitTestCase {
 			$this->assertArrayNotHasKey(
 				'reset_on_convert',
 				$stored,
-				'A reset_on_convert key survived sanitization. It was replaced by on_convert because "reset" described the inverse of the useful behaviour: it would clear the suppression and make a visitor who just converted immediately eligible again.'
+				'A reset_on_convert key survived sanitization. It was replaced by on_convert because "reset" described the inverse of the useful behavior: it would clear the suppression and make a visitor who just converted immediately eligible again.'
 			);
 			$this->assertSame(
 				array( 'mode', 'days', 'on_convert' ),

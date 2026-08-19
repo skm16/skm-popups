@@ -39,7 +39,7 @@ keyboard, and is undiscoverable by assistive technology, so it is offered as an
   with somebody else's words. With no heading, the editor warns, because a
   dialog announced as "dialog" and nothing else tells a visitor that something
   happened and nothing about what.
-* Banners are a labelled `region` landmark, not a dialog. Announcing a
+* Banners are a labeled `region` landmark, not a dialog. Announcing a
   non-modal strip as a dialog is a lie about whether the page behind it is
   usable.
 * `prefers-reduced-motion: reduce` makes animation instant, not merely faster.
@@ -86,23 +86,23 @@ pattern could not honestly promise that matching a URL terminates.
 
 = Layouts and appearance =
 
-Two layouts. A **modal** is a native dialog, centred or near the top. A
+Two layouts. A **modal** is a native dialog, centered or near the top. A
 **notification bar** is a fixed strip that leaves the page behind it usable, and
 it can sit at the top of the window, at the bottom, or as a **lower third** —
 the broadcast-style band two thirds of the way down.
 
 Four themes ship — light, dark, bordered, and inherit, which follows the active
 site theme's own palette. Any of them can be adjusted per popup: background,
-text, link and border colours, plus border width, corner rounding, font and text
+text, link and border colors, plus border width, corner rounding, font and text
 size.
 
-Colours are hex values and everything else is a named step rather than a
+Colors are hex values and everything else is a named step rather than a
 measurement — *thin*, *rounded*, *large*. That is deliberate. Nothing you choose
 is ever handed to the browser as CSS to be parsed, and what a step looks like
 stays in the stylesheet, so a future release can retune it without rewriting
 popups you have already published.
 
-The shipped themes are measured against WCAG AA contrast. A colour pair you
+The shipped themes are measured against WCAG AA contrast. A color pair you
 choose yourself is not, so check it before publishing.
 
 = Triggers =
@@ -131,7 +131,7 @@ values so reactivating restores the popup exactly.
 editor your site already uses and renders the same five panels either way — as
 sidebar panels in the block editor, or as meta boxes in the classic one. It
 registers no editor filter of its own, so your configuration is not just
-honoured, it is untouched.
+honored, it is untouched.
 
 Requires WordPress 6.5 and PHP 8.1. Both are checked on activation, and the
 plugin refuses to load with an explanatory notice rather than a fatal error if
@@ -141,7 +141,7 @@ either is unmet.
 
 One URL must not be cached: `/wp-json/popkit/v1/context`. It is the only
 response that varies by visitor, and PopKit sends `Cache-Control: no-store,
-private` and `Vary: Cookie` on it. Most caches honour that. Some host-level
+private` and `Vary: Cookie` on it. Most caches honor that. Some host-level
 configurations cache REST responses regardless, and there the exclusion has to
 be added by hand.
 
@@ -309,7 +309,7 @@ with it. There is no analytics table and no event log.
 == Accessibility ==
 
 PopKit is built to the WordPress accessibility-ready guidelines, and its
-accessibility behaviour is covered by automated tests rather than asserted here.
+accessibility behavior is covered by automated tests rather than asserted here.
 
 = Criteria met =
 
@@ -319,7 +319,7 @@ accessibility behaviour is covered by automated tests rather than asserted here.
 * **Controls** — the close control is a real `<button>` with a text accessible
   name, not a `<span>`, an icon font, or a bare multiplication sign. Its hit
   area is at least 44x44 CSS pixels in every theme and both layouts.
-* **Skip links and landmarks** — the banner layout is a labelled `region`
+* **Skip links and landmarks** — the banner layout is a labeled `region`
   landmark. It is not announced as a dialog, because the page behind it stays
   usable.
 * **Headings** — the popup's accessible name comes from its own heading,
@@ -330,7 +330,7 @@ accessibility behaviour is covered by automated tests rather than asserted here.
   would be announced only as "Popup".
 * **Contrast** — shipped themes meet WCAG 2.2 AA in both layouts: 4.5:1 for body
   text and 3:1 for interface boundaries. Contrast is verified by measuring
-  colours as a browser actually renders them, not by reading the stylesheet.
+  colors as a browser actually renders them, not by reading the stylesheet.
 * **Images of text** — none are used.
 * **Media** — PopKit ships no audio or video and adds no autoplaying media.
 * **Reduced motion** — `prefers-reduced-motion: reduce` makes transitions
@@ -370,7 +370,7 @@ and the block editor's own checks cover the content.
   editor filter of its own. Override it for popups alone with
   `add_filter( 'popkit_use_block_editor', '__return_true' );` or `'__return_false'`.
 * Added per-popup appearance overrides: background, text, link and border
-  colours, plus border width, corner rounding, font and text size.
+  colors, plus border width, corner rounding, font and text size.
 * Added a **lower third** position for the notification bar layout.
 * Added **Popups > Settings**, holding the opt-in for deleting PopKit's data
   when the plugin is deleted. The setting existed but had no interface.
@@ -388,7 +388,7 @@ and the block editor's own checks cover the content.
 = 0.2.0 =
 Fixes a blank settings screen on sites running Classic Editor, and corrects a
 popup that could take its announced name from unrelated page content. Adds
-appearance customisation and a lower-third notification bar.
+appearance customization and a lower-third notification bar.
 
 = 0.1.0 =
 Initial release.

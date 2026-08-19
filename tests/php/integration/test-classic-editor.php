@@ -67,7 +67,7 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 		 * filter once, at boot, and attaches nothing when nobody has an opinion — so
 		 * a filter added after boot registers no override, exactly as it would on a
 		 * real site where the filter has to be in place before `plugins_loaded`.
-		 * Adding the filter without re-initialising would test a configuration no
+		 * Adding the filter without re-initializing would test a configuration no
 		 * site can actually have.
 		 */
 		add_filter( 'popkit_use_block_editor', '__return_false' );
@@ -143,7 +143,7 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	/**
 	 * A site that uses the classic editor gets popups in the classic editor.
 	 *
-	 * The behaviour the reversal exists for, expressed the way a real site
+	 * The behavior the reversal exists for, expressed the way a real site
 	 * produces it: something else forces the classic editor, and PopKit follows
 	 * rather than fighting.
 	 *
@@ -191,7 +191,7 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	 * while the classic meta boxes, trusting popkit's own preference, stood down.
 	 * No error, no notice — a popup with nowhere to configure anything.
 	 *
-	 * `__return_false` at 100 is that plugin's behaviour reproduced exactly.
+	 * `__return_false` at 100 is that plugin's behavior reproduced exactly.
 	 *
 	 * @return void
 	 */
@@ -500,7 +500,7 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	 * A save carrying no nonce leaves every panel alone.
 	 *
 	 * This is the one that protects an author from a bulk status change wiping
-	 * their targeting. Writing defaults on an unrecognised save would look
+	 * their targeting. Writing defaults on an unrecognized save would look
 	 * harmless in a unit test and destroy work on a real site.
 	 *
 	 * @return void
@@ -674,11 +674,11 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The appearance box offers the customisation controls.
+	 * The appearance box offers the customization controls.
 	 *
 	 * @return void
 	 */
-	public function test_the_appearance_box_offers_customisation() {
+	public function test_the_appearance_box_offers_customization() {
 		$html = $this->render( 'render_appearance' );
 
 		$this->assertStringContainsString( 'popkit_display[custom_background]', $html );

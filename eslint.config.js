@@ -155,7 +155,7 @@ module.exports = [
 			/*
 			 * JSX pragmas are real Babel directives, not documentation, but they
 			 * are written as docblock tags and `jsdoc/check-tag-names` rejects
-			 * every tag it does not recognise. Declaring them here is what lets
+			 * every tag it does not recognize. Declaring them here is what lets
 			 * an editor file opt into `@wordpress/element`'s JSX runtime without
 			 * three lint errors at the top of the file — and without anyone
 			 * reaching for an inline disable comment, which is the workaround

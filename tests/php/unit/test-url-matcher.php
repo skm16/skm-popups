@@ -44,7 +44,7 @@ if ( ! class_exists( Url_Matcher::class ) ) {
 }
 
 /**
- * Asserts the four match modes, the length cap, and path normalisation.
+ * Asserts the four match modes, the length cap, and path normalization.
  */
 final class Test_Popkit_Url_Matcher extends TestCase {
 
@@ -122,7 +122,7 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	}
 
 	/**
-	 * An unrecognised mode never matches, however plausible the value looks.
+	 * An unrecognized mode never matches, however plausible the value looks.
 	 *
 	 * This is the fail-closed half of the security invariant. A stored rule whose
 	 * mode is `regex` must match nothing at all — not fall back to `contains`,
@@ -130,7 +130,7 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	 *
 	 * @dataProvider data_unknown_modes
 	 *
-	 * @param string $mode Unrecognised mode identifier.
+	 * @param string $mode Unrecognized mode identifier.
 	 * @return void
 	 */
 	public function test_an_unknown_mode_never_matches( string $mode ) {
@@ -424,7 +424,7 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 		$this->assertFalse(
 			Url_Matcher::matches( 'glob', $pattern, $regex_subject ),
 			sprintf(
-				'glob("%1$s", "%2$s") matched. That is regular-expression behaviour: in this match language every character except * and ? is a literal. A true result here means the matcher is compiling patterns, which reintroduces the unbounded matching that docs/CLAUDE.md -> Security forbids.',
+				'glob("%1$s", "%2$s") matched. That is regular-expression behavior: in this match language every character except * and ? is a literal. A true result here means the matcher is compiling patterns, which reintroduces the unbounded matching that docs/CLAUDE.md -> Security forbids.',
 				$pattern,
 				$regex_subject
 			)
@@ -709,19 +709,19 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	}
 
 	/**
-	 * Normalisation strips the origin, the query string and the fragment.
+	 * Normalization strips the origin, the query string and the fragment.
 	 *
-	 * @dataProvider data_normalise_origin_query_fragment
+	 * @dataProvider data_normalize_origin_query_fragment
 	 *
 	 * @param string $url      Input URL or path.
-	 * @param string $expected Expected normalised path.
+	 * @param string $expected Expected normalized path.
 	 * @return void
 	 */
-	public function test_normalise_path_strips_origin_query_and_fragment( string $url, string $expected ) {
+	public function test_normalize_path_strips_origin_query_and_fragment( string $url, string $expected ) {
 		$this->assertSame(
 			$expected,
-			Url_Matcher::normalise_path( $url ),
-			sprintf( 'normalise_path("%s") returned the wrong path.', $url )
+			Url_Matcher::normalize_path( $url ),
+			sprintf( 'normalize_path("%s") returned the wrong path.', $url )
 		);
 	}
 
@@ -735,7 +735,7 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	 *
 	 * @return array[] Test name => array( url, expected ).
 	 */
-	public function data_normalise_origin_query_fragment() {
+	public function data_normalize_origin_query_fragment() {
 		return array(
 			'absolute url'                    => array( 'https://example.com/foo/bar', '/foo/bar' ),
 			'absolute url with query'         => array( 'https://example.com/foo?x=1', '/foo' ),
@@ -760,19 +760,19 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	}
 
 	/**
-	 * Normalisation guarantees one leading slash and collapses runs of slashes.
+	 * Normalization guarantees one leading slash and collapses runs of slashes.
 	 *
-	 * @dataProvider data_normalise_slashes
+	 * @dataProvider data_normalize_slashes
 	 *
 	 * @param string $url      Input URL or path.
-	 * @param string $expected Expected normalised path.
+	 * @param string $expected Expected normalized path.
 	 * @return void
 	 */
-	public function test_normalise_path_collapses_slashes( string $url, string $expected ) {
+	public function test_normalize_path_collapses_slashes( string $url, string $expected ) {
 		$this->assertSame(
 			$expected,
-			Url_Matcher::normalise_path( $url ),
-			sprintf( 'normalise_path("%s") returned the wrong path.', $url )
+			Url_Matcher::normalize_path( $url ),
+			sprintf( 'normalize_path("%s") returned the wrong path.', $url )
 		);
 	}
 
@@ -785,7 +785,7 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	 *
 	 * @return array[] Test name => array( url, expected ).
 	 */
-	public function data_normalise_slashes() {
+	public function data_normalize_slashes() {
 		return array(
 			'already normal'           => array( '/campaigns/giving', '/campaigns/giving' ),
 			'missing leading slash'    => array( 'campaigns/giving', '/campaigns/giving' ),
@@ -812,17 +812,17 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	 * double-decode filter bypass. `%252e` is the canonical probe: one decode
 	 * yields `%2e`, two yield `.`.
 	 *
-	 * @dataProvider data_normalise_decoding
+	 * @dataProvider data_normalize_decoding
 	 *
 	 * @param string $url      Input URL or path.
-	 * @param string $expected Expected normalised path.
+	 * @param string $expected Expected normalized path.
 	 * @return void
 	 */
-	public function test_normalise_path_decodes_exactly_once( string $url, string $expected ) {
+	public function test_normalize_path_decodes_exactly_once( string $url, string $expected ) {
 		$this->assertSame(
 			$expected,
-			Url_Matcher::normalise_path( $url ),
-			sprintf( 'normalise_path("%s") returned the wrong path.', $url )
+			Url_Matcher::normalize_path( $url ),
+			sprintf( 'normalize_path("%s") returned the wrong path.', $url )
 		);
 	}
 
@@ -831,7 +831,7 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	 *
 	 * @return array[] Test name => array( url, expected ).
 	 */
-	public function data_normalise_decoding() {
+	public function data_normalize_decoding() {
 		return array(
 			'one decode of a space'           => array( '/a%20b', '/a b' ),
 			'one decode of a dot'             => array( '/%2e', '/.' ),
@@ -854,15 +854,15 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 	}
 
 	/**
-	 * Every normalised path begins with a slash.
+	 * Every normalized path begins with a slash.
 	 *
 	 * `Url_Matcher::matches()` documents that an `exact` rule with an empty value
-	 * can never match a normalised path. That claim rests entirely on this
+	 * can never match a normalized path. That claim rests entirely on this
 	 * property, so it is asserted directly rather than inferred.
 	 *
 	 * @return void
 	 */
-	public function test_normalise_path_always_returns_a_leading_slash() {
+	public function test_normalize_path_always_returns_a_leading_slash() {
 		$inputs = array(
 			'',
 			'/',
@@ -881,35 +881,35 @@ final class Test_Popkit_Url_Matcher extends TestCase {
 		);
 
 		foreach ( $inputs as $input ) {
-			$path = Url_Matcher::normalise_path( $input );
+			$path = Url_Matcher::normalize_path( $input );
 
-			$this->assertNotSame( '', $path, sprintf( 'normalise_path("%s") returned an empty path.', $input ) );
+			$this->assertNotSame( '', $path, sprintf( 'normalize_path("%s") returned an empty path.', $input ) );
 			$this->assertTrue(
 				str_starts_with( $path, '/' ),
-				sprintf( 'normalise_path("%1$s") returned "%2$s", which does not begin with a slash.', $input, $path )
+				sprintf( 'normalize_path("%1$s") returned "%2$s", which does not begin with a slash.', $input, $path )
 			);
 			$this->assertFalse(
 				Url_Matcher::matches( 'exact', '', $path ),
-				sprintf( 'An exact rule with an empty value must never match the normalised path "%s".', $path )
+				sprintf( 'An exact rule with an empty value must never match the normalized path "%s".', $path )
 			);
 		}
 	}
 
 	/**
-	 * Normalisation preserves case; only matching folds it.
+	 * Normalization preserves case; only matching folds it.
 	 *
-	 * Keeping the two responsibilities apart matters because the normalised path
+	 * Keeping the two responsibilities apart matters because the normalized path
 	 * is also what the editor and any future condition will display.
 	 *
 	 * @return void
 	 */
-	public function test_normalisation_preserves_case_and_matching_folds_it() {
-		$path = Url_Matcher::normalise_path( 'https://Example.com/Campaigns/Giving-Tuesday?x=1' );
+	public function test_normalization_preserves_case_and_matching_folds_it() {
+		$path = Url_Matcher::normalize_path( 'https://Example.com/Campaigns/Giving-Tuesday?x=1' );
 
 		$this->assertSame(
 			'/Campaigns/Giving-Tuesday',
 			$path,
-			'normalise_path() must not lowercase the path. Case folding belongs to matches(), which does it once for both operands.'
+			'normalize_path() must not lowercase the path. Case folding belongs to matches(), which does it once for both operands.'
 		);
 
 		$this->assertTrue(

@@ -231,7 +231,7 @@ flakes, and they are not.
 
 **This has now been diagnosed twice from scratch**, both times after several
 hours spent hunting a race in the runtime that was never there. If work is being
-parallelised across agents, exactly one of them runs Playwright, and it runs when
+parallelized across agents, exactly one of them runs Playwright, and it runs when
 the others have finished editing. Everything else — PHPCS, PHPUnit, esbuild,
 size-limit, Jest — is safely concurrent, because none of it touches this
 instance.
@@ -371,7 +371,7 @@ authenticated 70763 bytes
 > <body class="page-template-default page page-id-4 logged-in wp-embed-responsive">
 ```
 
-A byte-comparison spec has to normalise the body class list, or compare the
+A byte-comparison spec has to normalize the body class list, or compare the
 popkit subtree rather than the whole document. This is the same fact
 `docs/data-model.md` states from the other side when it rules out body classes as
 a source of login state.
@@ -462,14 +462,14 @@ instead. When a spec needs the browser itself to be logged in, log in inside the
 test (`admin.visitAdminPage()`), or add a `globalSetup` that saves storage state
 to `STORAGE_STATE_PATH` and set `use.storageState` alongside it.
 
-Two behaviours of this instance are worth knowing when writing context-endpoint
+Two behaviors of this instance are worth knowing when writing context-endpoint
 specs, because both are load-bearing for popkit and both are reproduced
 faithfully here:
 
 - A REST request carrying a valid logged-in cookie but **no `X-WP-Nonce`** is
   treated as anonymous. `GET /wp-json/wp/v2/users/me` with cookies and no nonce
   returns `rest_not_logged_in`. That is precisely the
-  `rest_cookie_check_errors()` behaviour that makes `is_user_logged_in()`
+  `rest_cookie_check_errors()` behavior that makes `is_user_logged_in()`
   unusable in the context route.
 - Salts in `wp-config-e2e.php` are fixed, so a saved storage state survives a
   server restart and the logged-in cookie is reproducible across runs.
@@ -557,7 +557,7 @@ cookie, and that has not changed. The failure `CLAUDE.md` describes —
 `rest_cookie_check_errors()` making the context route report `logged_out` for
 everybody — is invisible to a fabricated session. Do not "fix" anything here by
 swapping in a cookie; that would delete the only test proving the plugin's most
-important security behaviour.
+important security behavior.
 
 Do not add retries either. A renderer crash is not flake, and retrying it hides
 the next real one.

@@ -109,7 +109,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * The button is the first thing inside the container. On a browser that does not
  * yet implement the current dialog focusing steps, `.showModal()` focuses the
- * first focusable descendant instead of honouring `autofocus` on the dialog, and
+ * first focusable descendant instead of honoring `autofocus` on the dialog, and
  * putting the close button first means that fallback lands on the dismissal
  * control rather than on whichever form field the author happened to place at
  * the top — which the constitution forbids outright.
@@ -153,7 +153,7 @@ defined( 'ABSPATH' ) || exit;
  * meaning: `popkit-popup`, `popkit-popup--modal` or `--banner`,
  * `popkit-popup--theme-*`, `popkit-popup--size-*`, and `popkit-popup--no-overlay`
  * on a modal whose overlay is off. `close_on_overlay_click` appears in neither
- * list — it is behaviour, the controller reads it from the emitted config, and
+ * list — it is behavior, the controller reads it from the emitted config, and
  * putting it in the DOM would be a second copy of a setting that already has a
  * home.
  *
@@ -221,7 +221,7 @@ final class Renderer {
 	private const HEADING_TAGS = array( 'H1', 'H2', 'H3', 'H4', 'H5', 'H6' );
 
 	/**
-	 * Which custom property each stored colour override feeds.
+	 * Which custom property each stored color override feeds.
 	 *
 	 * Mapped explicitly rather than derived from the field name. The stored names
 	 * describe what an author is choosing — a background, the text — and the token
@@ -330,7 +330,7 @@ final class Renderer {
 			'tabindex'              => '-1',
 		);
 
-		$attributes += self::customisation( $display );
+		$attributes += self::customization( $display );
 
 		if ( $is_banner ) {
 			$attributes['role']   = self::BANNER_ROLE;
@@ -530,11 +530,11 @@ final class Renderer {
 	 * A popup stores `thick`; `frontend.css` decides what `thick` is, and can
 	 * change its mind in a later release without rewriting anybody's popups.
 	 *
-	 * **Colours become inline custom properties.** A colour has no scale to be a
+	 * **Colors become inline custom properties.** A color has no scale to be a
 	 * step on, so it has to travel as a literal. It is written as a custom
 	 * property rather than as a real declaration so it feeds the same tokens the
 	 * shipped themes set, which means one rule in the stylesheet keeps working
-	 * whether the colour came from a theme or from an author.
+	 * whether the color came from a theme or from an author.
 	 *
 	 * Nothing here is safe by convention. `Meta::sanitize_color()` reduces these
 	 * four values to `#rgb` or `#rrggbb` and to nothing else, precisely because
@@ -551,7 +551,7 @@ final class Renderer {
 	 * @param array<string, mixed> $display Stored display settings.
 	 * @return array<string, string> Extra root attributes, empty when nothing is overridden.
 	 */
-	private static function customisation( array $display ): array {
+	private static function customization( array $display ): array {
 		$attributes = array();
 
 		foreach ( Meta::DISPLAY_SCALE_FIELDS as $field => $scale ) {

@@ -115,7 +115,7 @@ final class Classic_Editor {
 	 * Registers the three meta boxes.
 	 *
 	 * Targeting gets the wide column because a rule is a row of controls and a
-	 * group is a list of rules. Behaviour and Appearance are narrower by nature.
+	 * group is a list of rules. Behavior and Appearance are narrower by nature.
 	 *
 	 * @since 0.1.0
 	 *
@@ -139,9 +139,9 @@ final class Classic_Editor {
 		);
 
 		add_meta_box(
-			'popkit-behaviour',
+			'popkit-behavior',
 			__( 'PopKit — Triggers, schedule and frequency', 'popkit' ),
-			array( self::class, 'render_behaviour' ),
+			array( self::class, 'render_behavior' ),
 			Post_Type::POST_TYPE,
 			'normal',
 			'default'
@@ -159,6 +159,20 @@ final class Classic_Editor {
 
 	/**
 	 * Enqueues the repeater script on the popup editing screens only.
+	 *
+	 * ## The color picker is a dependency, not a second script
+	 *
+	 * `wp-color-picker` is Automattic's Iris bundled with core and registered on
+	 * every install since 3.5, so there is nothing to ship for it. It is declared
+	 * as a dependency of this handle rather than enqueued separately, which is
+	 * what guarantees it has run before `dist/classic.js` looks for
+	 * `jQuery.fn.wpColorPicker`.
+	 *
+	 * `jquery` is named explicitly even though `wp-color-picker` already depends
+	 * on it. Depending on a dependency's dependency is depending on an
+	 * implementation detail: if Iris is ever rewritten without jQuery, this file
+	 * still uses `window.jQuery` to call it and would break with no error worth
+	 * reading.
 	 *
 	 * @since 0.1.0
 	 *
@@ -180,8 +194,14 @@ final class Classic_Editor {
 			return;
 		}
 
-		wp_enqueue_style( self::HANDLE, POPKIT_URL . 'dist/classic.css', array(), POPKIT_VERSION );
-		wp_enqueue_script( self::HANDLE, POPKIT_URL . 'dist/classic.js', array(), POPKIT_VERSION, true );
+		wp_enqueue_style( self::HANDLE, POPKIT_URL . 'dist/classic.css', array( 'wp-color-picker' ), POPKIT_VERSION );
+		wp_enqueue_script(
+			self::HANDLE,
+			POPKIT_URL . 'dist/classic.js',
+			array( 'jquery', 'wp-color-picker' ),
+			POPKIT_VERSION,
+			true
+		);
 	}
 
 	/**
@@ -200,9 +220,13 @@ final class Classic_Editor {
 			? $stored['groups']
 			: array();
 
+		self::render_scope( array() !== $groups );
+
+		echo '<div class="popkit-scoped" data-popkit-scoped' . ( array() === $groups ? ' hidden' : '' ) . '>';
+
 		echo '<div class="popkit-repeater" data-popkit-groups>';
 		echo '<p class="description">';
-		echo esc_html__( 'Rules inside a group must all match. Any one group matching is enough. A popup with no rules shows everywhere.', 'popkit' );
+		echo esc_html__( 'Rules inside a group must all match. Any one group matching is enough.', 'popkit' );
 		echo '</p>';
 
 		foreach ( array_values( $groups ) as $index => $group ) {
@@ -215,6 +239,8 @@ final class Classic_Editor {
 		echo esc_html__( 'Add group', 'popkit' );
 		echo '</button></p>';
 
+		echo '</div>';
+
 		// Templates the repeater script clones. Rendered once, never submitted:
 		// a <template>'s contents are inert and its controls are not form fields.
 		echo '<template data-popkit-template="group">';
@@ -224,6 +250,72 @@ final class Classic_Editor {
 		echo '<template data-popkit-template="rule">';
 		self::render_rule( 0, 0, array(), true );
 		echo '</template>';
+	}
+
+	/**
+	 * Renders the choice between showing everywhere and showing where rules match.
+	 *
+	 * ## Why this exists when "no rules" already means everywhere
+	 *
+	 * It always has: `docs/data-model.md` defines an empty rule set as matching
+	 * every page, and that is what a new popup carries. But an author looking at
+	 * an empty repeater and a sentence in small gray text has to infer it, and the
+	 * inference runs the wrong way — an empty list of *permissions* usually means
+	 * nothing is permitted. Authors were reading a brand new popup as switched off.
+	 *
+	 * So the two readings are offered as a choice, and the choice is stored in the
+	 * only way the data model can express it. There is no new meta key and no
+	 * `scope` field on disk: picking "the whole site" writes `groups => array()`,
+	 * which is the same value the popup already had. The radio is a view of the
+	 * stored rule set, not a second setting that could disagree with it.
+	 *
+	 * ## Choosing the whole site discards rules, and says so
+	 *
+	 * Because there is nowhere to keep them. A stored rule set that means
+	 * "everywhere" *is* the empty one, so a popup cannot both show site-wide and
+	 * remember the rules it is not using. Rather than let that be a surprise, the
+	 * option carries the consequence in its own description and
+	 * `dist/classic.js` hides the groups the moment it is chosen — the rules are
+	 * visibly gone before Update is pressed, not silently absent afterwards.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @param bool $has_rules Whether the popup currently stores any groups.
+	 * @return void
+	 */
+	private static function render_scope( bool $has_rules ): void {
+		$choices = array(
+			'everywhere' => array(
+				'label'       => __( 'Everywhere on the site', 'popkit' ),
+				'description' => __( 'Show on every page, subject to the triggers, schedule and frequency below.', 'popkit' ),
+			),
+			'rules'      => array(
+				'label'       => __( 'Only where these rules match', 'popkit' ),
+				'description' => __( 'Choosing this and saving with no rules is the same as everywhere. Switching back to everywhere removes the rules.', 'popkit' ),
+			),
+		);
+
+		echo '<fieldset class="popkit-scope">';
+		echo '<legend class="popkit-scope__legend">' . esc_html__( 'Where this popup may show', 'popkit' ) . '</legend>';
+
+		foreach ( $choices as $value => $choice ) {
+			$id      = 'popkit-scope-' . $value;
+			$checked = ( 'rules' === $value ) === $has_rules;
+
+			echo '<p class="popkit-scope__choice">';
+			echo '<label for="' . esc_attr( $id ) . '">';
+			echo '<input type="radio" id="' . esc_attr( $id ) . '" name="popkit_conditions[scope]"';
+			echo ' value="' . esc_attr( $value ) . '" ' . checked( $checked, true, false );
+			echo ' data-popkit-scope aria-describedby="' . esc_attr( $id ) . '-description" /> ';
+			echo esc_html( $choice['label'] );
+			echo '</label>';
+			echo '<span class="description" id="' . esc_attr( $id ) . '-description">';
+			echo esc_html( $choice['description'] );
+			echo '</span>';
+			echo '</p>';
+		}
+
+		echo '</fieldset>';
 	}
 
 	/**
@@ -371,7 +463,7 @@ final class Classic_Editor {
 	 * @param \WP_Post $post Popup being edited.
 	 * @return void
 	 */
-	public static function render_behaviour( $post ): void {
+	public static function render_behavior( $post ): void {
 		self::render_triggers( $post );
 		self::render_schedule( $post );
 		self::render_frequency( $post );
@@ -486,10 +578,11 @@ final class Classic_Editor {
 			'popkit_schedule[timezone]',
 			'popkit-schedule-timezone',
 			array(
-				'type'    => 'enum',
-				'enum'    => Meta::SCHEDULE_TIMEZONES,
-				'control' => 'select',
-				'label'   => __( 'Interpret those times in', 'popkit' ),
+				'type'        => 'enum',
+				'enum'        => Meta::SCHEDULE_TIMEZONES,
+				'enum_labels' => Vocabulary::schedule_timezones(),
+				'control'     => 'select',
+				'label'       => __( 'Interpret those times in', 'popkit' ),
 			),
 			$schedule['timezone'] ?? 'site'
 		);
@@ -513,10 +606,11 @@ final class Classic_Editor {
 			'popkit_frequency[mode]',
 			'popkit-frequency-mode',
 			array(
-				'type'    => 'enum',
-				'enum'    => Meta::FREQUENCY_MODES,
-				'control' => 'select',
-				'label'   => __( 'How often a visitor may see this popup', 'popkit' ),
+				'type'        => 'enum',
+				'enum'        => Meta::FREQUENCY_MODES,
+				'enum_labels' => Vocabulary::frequency_modes(),
+				'control'     => 'select',
+				'label'       => __( 'How often a visitor may see this popup', 'popkit' ),
 			),
 			$frequency['mode'] ?? 'always'
 		);
@@ -525,10 +619,11 @@ final class Classic_Editor {
 			'popkit_frequency[days]',
 			'popkit-frequency-days',
 			array(
-				'type'    => 'integer',
-				'control' => 'number',
-				'min'     => 1,
-				'label'   => __( 'Days between showings, when the mode above uses them', 'popkit' ),
+				'type'        => 'integer',
+				'control'     => 'number',
+				'min'         => 1,
+				'label'       => __( 'Days between showings', 'popkit' ),
+				'description' => __( 'Used only by the “once every few days” mode above.', 'popkit' ),
 			),
 			$frequency['days'] ?? 7
 		);
@@ -537,10 +632,11 @@ final class Classic_Editor {
 			'popkit_frequency[on_convert]',
 			'popkit-frequency-on-convert',
 			array(
-				'type'    => 'enum',
-				'enum'    => Meta::FREQUENCY_ON_CONVERT,
-				'control' => 'select',
-				'label'   => __( 'After the visitor completes the popup', 'popkit' ),
+				'type'        => 'enum',
+				'enum'        => Meta::FREQUENCY_ON_CONVERT,
+				'enum_labels' => Vocabulary::frequency_on_convert(),
+				'control'     => 'select',
+				'label'       => __( 'After the visitor completes the popup', 'popkit' ),
 			),
 			$frequency['on_convert'] ?? 'suppress_forever'
 		);
@@ -562,20 +658,24 @@ final class Classic_Editor {
 
 		$controls = array(
 			'layout'    => array(
-				'enum'  => Meta::DISPLAY_LAYOUTS,
-				'label' => __( 'Layout', 'popkit' ),
+				'enum'   => Meta::DISPLAY_LAYOUTS,
+				'labels' => Vocabulary::layouts(),
+				'label'  => __( 'Layout', 'popkit' ),
 			),
 			'theme'     => array(
-				'enum'  => Meta::DISPLAY_THEMES,
-				'label' => __( 'Theme', 'popkit' ),
+				'enum'   => Meta::DISPLAY_THEMES,
+				'labels' => Vocabulary::themes(),
+				'label'  => __( 'Theme', 'popkit' ),
 			),
 			'size'      => array(
-				'enum'  => Meta::DISPLAY_SIZES,
-				'label' => __( 'Size', 'popkit' ),
+				'enum'   => Meta::DISPLAY_SIZES,
+				'labels' => Vocabulary::sizes(),
+				'label'  => __( 'Size', 'popkit' ),
 			),
 			'animation' => array(
-				'enum'  => Meta::DISPLAY_ANIMATIONS,
-				'label' => __( 'Animation', 'popkit' ),
+				'enum'   => Meta::DISPLAY_ANIMATIONS,
+				'labels' => Vocabulary::animations(),
+				'label'  => __( 'Animation', 'popkit' ),
 			),
 		);
 
@@ -584,10 +684,11 @@ final class Classic_Editor {
 				'popkit_display[' . $field . ']',
 				'popkit-display-' . $field,
 				array(
-					'type'    => 'enum',
-					'enum'    => $spec['enum'],
-					'control' => 'select',
-					'label'   => $spec['label'],
+					'type'        => 'enum',
+					'enum'        => $spec['enum'],
+					'enum_labels' => $spec['labels'],
+					'control'     => 'select',
+					'label'       => $spec['label'],
 				),
 				$display[ $field ] ?? null
 			);
@@ -615,14 +716,14 @@ final class Classic_Editor {
 		echo esc_html__( 'The close button is always rendered and cannot be turned off. An overlay click and the Escape key are additional ways to dismiss a popup, never the only ones.', 'popkit' );
 		echo '</p>';
 
-		self::render_customisation( $display );
+		self::render_customization( $display );
 	}
 
 	/**
 	 * Renders the position select, which is the one control whose vocabulary
 	 * depends on another control.
 	 *
-	 * A modal is centred or near the top; a banner is at the top, at the bottom,
+	 * A modal is centered or near the top; a banner is at the top, at the bottom,
 	 * or a lower third. Built from the *stored* layout, this select offered banner
 	 * positions only to a popup that had already been saved as a banner — so an
 	 * author switching layout had to save, watch the options change, and save
@@ -642,26 +743,28 @@ final class Classic_Editor {
 	 * @return void
 	 */
 	private static function render_position( array $display, string $layout ): void {
-		$labels   = array(
-			'modal'  => __( 'Modal positions', 'popkit' ),
-			'banner' => __( 'Notification bar positions', 'popkit' ),
-		);
-		$selected = isset( $display['position'] ) ? (string) $display['position'] : '';
+		$groups    = Vocabulary::position_groups();
+		$positions = Vocabulary::positions();
+		$selected  = isset( $display['position'] ) ? (string) $display['position'] : '';
 
 		echo '<p class="popkit-field popkit-field--select">';
 		echo '<label class="popkit-field__label" for="popkit-display-position">' . esc_html__( 'Position', 'popkit' ) . '</label>';
 		echo '<select id="popkit-display-position" name="popkit_display[position]" data-popkit-position>';
 
-		foreach ( Meta::DISPLAY_POSITIONS as $for_layout => $positions ) {
+		foreach ( Meta::DISPLAY_POSITIONS as $for_layout => $layout_positions ) {
+			$labels = isset( $positions[ $for_layout ] ) && is_array( $positions[ $for_layout ] )
+				? $positions[ $for_layout ]
+				: array();
+
 			echo '<optgroup data-popkit-for-layout="' . esc_attr( (string) $for_layout ) . '"';
-			echo ' label="' . esc_attr( (string) ( $labels[ $for_layout ] ?? $for_layout ) ) . '"';
+			echo ' label="' . esc_attr( Vocabulary::label( $groups, (string) $for_layout ) ) . '"';
 			echo $for_layout === $layout ? '' : ' disabled';
 			echo '>';
 
-			foreach ( $positions as $position ) {
+			foreach ( $layout_positions as $position ) {
 				echo '<option value="' . esc_attr( (string) $position ) . '"';
 				echo selected( $selected, (string) $position, false );
-				echo '>' . esc_html( (string) $position ) . '</option>';
+				echo '>' . esc_html( Vocabulary::label( $labels, (string) $position ) ) . '</option>';
 			}
 
 			echo '</optgroup>';
@@ -674,40 +777,40 @@ final class Classic_Editor {
 	/**
 	 * Renders the per-popup appearance overrides.
 	 *
-	 * Colours are text inputs holding a hex value, and blank means "keep the
-	 * theme". A native colour input was the obvious choice and is the wrong one:
-	 * it has no empty state — it reports `#000000` when nothing has been picked —
-	 * so an author who opened the control and changed their mind would have
-	 * silently set the popup's text to black.
+	 * Each color is a text input holding a hex value that `dist/classic.js`
+	 * upgrades to a WordPress color picker. Blank means "keep the theme", and
+	 * keeping blank reachable is the constraint the control is chosen around —
+	 * see {@see Classic_Fields::color()} for why `type="color"` cannot be used.
+	 *
+	 * The hex hint used to be folded into the label, which made every color
+	 * label a sentence: "Background color — hex value such as #ffffff, or blank
+	 * for the theme". In a sidebar meta box that wrapped to four lines above a
+	 * control one line tall, and a screen reader read the whole sentence out on
+	 * every focus. The hint is a `description` now, tied to the input with
+	 * `aria-describedby`, which is announced once and after the label rather than
+	 * as part of it.
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param array<string, mixed> $display Stored display settings.
 	 * @return void
 	 */
-	private static function render_customisation( array $display ): void {
-		$labels = array(
-			'custom_background'   => __( 'Background colour', 'popkit' ),
-			'custom_text'         => __( 'Text colour', 'popkit' ),
-			'custom_accent'       => __( 'Link colour', 'popkit' ),
-			'custom_border_color' => __( 'Border colour', 'popkit' ),
-		);
-
-		echo '<h4>' . esc_html__( 'Customise this popup', 'popkit' ) . '</h4>';
+	private static function render_customization( array $display ): void {
+		echo '<h4>' . esc_html__( 'Customize this popup', 'popkit' ) . '</h4>';
 		echo '<p class="description">';
-		echo esc_html__( 'Leave a colour blank to keep the theme’s own. Check the contrast between your background and text colours before publishing — the shipped themes are measured, a custom pair is not.', 'popkit' );
+		echo esc_html__( 'Leave a color blank to keep the theme’s own. Check the contrast between your background and text colors before publishing — the shipped themes are measured, a custom pair is not.', 'popkit' );
 		echo '</p>';
 
-		foreach ( $labels as $field => $label ) {
+		foreach ( Vocabulary::colors() as $field => $label ) {
 			Classic_Fields::render(
 				'popkit_display[' . $field . ']',
 				'popkit-display-' . str_replace( '_', '-', $field ),
 				array(
-					'type'       => 'string',
-					'control'    => 'text',
-					'max_length' => 7,
-					/* translators: %s: name of the colour being set, e.g. "Background colour". */
-					'label'      => sprintf( __( '%s — hex value such as #ffffff, or blank for the theme', 'popkit' ), $label ),
+					'type'        => 'string',
+					'control'     => 'color',
+					'max_length'  => 7,
+					'label'       => $label,
+					'description' => __( 'Blank keeps the theme’s own.', 'popkit' ),
 				),
 				$display[ $field ] ?? ''
 			);
@@ -720,15 +823,18 @@ final class Classic_Editor {
 			'custom_font_size'    => __( 'Text size', 'popkit' ),
 		);
 
+		$scale_labels = Vocabulary::scales();
+
 		foreach ( $scales as $field => $label ) {
 			Classic_Fields::render(
 				'popkit_display[' . $field . ']',
 				'popkit-display-' . str_replace( '_', '-', $field ),
 				array(
-					'type'    => 'enum',
-					'enum'    => Meta::DISPLAY_SCALE_FIELDS[ $field ],
-					'control' => 'select',
-					'label'   => $label,
+					'type'        => 'enum',
+					'enum'        => Meta::DISPLAY_SCALE_FIELDS[ $field ],
+					'enum_labels' => $scale_labels[ $field ] ?? array(),
+					'control'     => 'select',
+					'label'       => $label,
 				),
 				$display[ $field ] ?? 'inherit'
 			);
@@ -783,7 +889,7 @@ final class Classic_Editor {
 		 * hand a sanitizer — and sanitizing the leaves here would be the wrong
 		 * place for it anyway. Every value below reaches `update_post_meta()`,
 		 * where the `sanitize_callback` registered by Meta validates shape, types,
-		 * enums and bounds and refuses anything it does not recognise. Escaping a
+		 * enums and bounds and refuses anything it does not recognize. Escaping a
 		 * value here as well would corrupt legitimate input (a URL path holding an
 		 * ampersand, say) before the one real validator ever saw it.
 		 *
@@ -826,6 +932,20 @@ final class Classic_Editor {
 	 * @return array<string, mixed> Conditions meta value.
 	 */
 	private static function read_conditions( $raw ): array {
+		/*
+		 * The site-wide choice is answered before the rules are read, not after.
+		 * The controls for every rule stay in the form while they are hidden — see
+		 * `dist/classic.js`, which hides the container rather than emptying it — so
+		 * a submission that says "everywhere" still carries whatever the author had
+		 * typed. Reading the rules and then discarding them would work too and
+		 * would spend the effort to reach the same answer.
+		 */
+		$scope = is_array( $raw ) && isset( $raw['scope'] ) ? (string) $raw['scope'] : 'rules';
+
+		if ( 'everywhere' === $scope ) {
+			return Meta::default_conditions();
+		}
+
 		$groups = array();
 
 		foreach ( (array) ( is_array( $raw ) ? ( $raw['groups'] ?? array() ) : array() ) as $group ) {
@@ -1005,11 +1125,11 @@ final class Classic_Editor {
 		}
 
 		/*
-		 * Colours are passed through as submitted, blank included. Blank is the
+		 * Colors are passed through as submitted, blank included. Blank is the
 		 * author clearing an override and must reach the sanitizer as an empty
 		 * string rather than being skipped — skipping it would fall back to the
 		 * default, which for these fields is also empty, but only by coincidence.
-		 * `Meta::sanitize_color()` is what decides whether the value is a colour.
+		 * `Meta::sanitize_color()` is what decides whether the value is a color.
 		 */
 		foreach ( Meta::DISPLAY_COLOR_FIELDS as $field ) {
 			$display[ $field ] = isset( $raw[ $field ] ) ? (string) $raw[ $field ] : '';

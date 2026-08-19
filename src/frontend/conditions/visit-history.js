@@ -22,7 +22,7 @@
  * the one the condition exists to find, and the bug is invisible in
  * manual testing because the second pageview looks correct.
  *
- * The reading is taken once per pageview and memoised in {@link visited}, so the
+ * The reading is taken once per pageview and memoized in {@link visited}, so the
  * answer cannot change underneath a second `visit_history` rule, or between the
  * two lanes `controller.js` evaluates popups in — one synchronously at boot, one
  * after the context response arrives. Two popups on one page must agree about
@@ -87,7 +87,7 @@ const KEY = 'popkit:visited';
 let visited;
 
 /**
- * Reads the visit record, then marks this visit, memoising the reading.
+ * Reads the visit record, then marks this visit, memoizing the reading.
  *
  * Both accesses sit in one try. A browser that permits the read and refuses the
  * write is reported as unresolvable rather than as first-time: the mark is what

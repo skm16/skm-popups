@@ -1,14 +1,14 @@
 <?php
 /**
- * Integration tests for uninstall behaviour.
+ * Integration tests for uninstall behavior.
  *
- * Two behaviours are asserted, and the difference between them is the whole point:
+ * Two behaviors are asserted, and the difference between them is the whole point:
  *
  * 1. **Default.** Uninstall removes plugin *infrastructure* — options, transients,
  *    capabilities — and leaves every authored `popkit_popup` post and its meta
  *    exactly where it was. Deleting a client's popups because a plugin was removed
- *    during routine maintenance is not acceptable behaviour, and "the docs said it
- *    would" is not a defence.
+ *    during routine maintenance is not acceptable behavior, and "the docs said it
+ *    would" is not a defense.
  * 2. **Opt in.** With the opt-in setting set to `true`, and only then, the popups
  *    and their meta go too.
  *
@@ -245,10 +245,10 @@ final class Test_Popkit_Uninstall extends WP_UnitTestCase {
 	 * meta — not that it is stored byte for byte as it was handed over. The
 	 * fixture seeds `array( 'layout' => 'modal' )` and the registered
 	 * `sanitize_callback` correctly fills in the rest of the documented defaults
-	 * from `docs/data-model.md` -> Display, so the authored value is normalised on
+	 * from `docs/data-model.md` -> Display, so the authored value is normalized on
 	 * *write*, long before uninstall runs. The byte-identical requirement in
 	 * `docs/CLAUDE.md` is about the `values` of an unknown rule type, which has no
-	 * declared schema to normalise against; registered meta that does have one is
+	 * declared schema to normalize against; registered meta that does have one is
 	 * a different contract.
 	 *
 	 * Existence is therefore asserted with metadata_exists() rather than inferred

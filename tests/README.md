@@ -15,7 +15,7 @@ Four suites, three of which need no Docker.
 composer run test:unit
 ```
 
-Pure-logic classes only: the capability map, the URL matcher, sanitisation
+Pure-logic classes only: the capability map, the URL matcher, sanitization
 bounds. `tests/php/bootstrap-unit.php` loads a small set of WordPress function
 stubs from `tests/php/stubs/`, so these run in milliseconds with no database and
 no container. Anything that genuinely needs WordPress belongs in the integration

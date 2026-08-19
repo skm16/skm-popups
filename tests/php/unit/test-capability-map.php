@@ -231,7 +231,7 @@ final class Test_Popkit_Capability_Map extends TestCase {
 	/**
 	 * The map carries no key beyond the documented set.
 	 *
-	 * An unrecognised key is dead weight: WordPress does not read it, generates
+	 * An unrecognized key is dead weight: WordPress does not read it, generates
 	 * its own default for whatever was intended, and reports nothing.
 	 *
 	 * @return void
@@ -245,7 +245,7 @@ final class Test_Popkit_Capability_Map extends TestCase {
 				$key,
 				self::ALLOWED_EXTRA,
 				sprintf(
-					'Unrecognised capability map key "%s". WordPress reads a fixed set of keys; anything else is a typo that is quietly ignored.',
+					'Unrecognized capability map key "%s". WordPress reads a fixed set of keys; anything else is a typo that is quietly ignored.',
 					$key
 				)
 			);

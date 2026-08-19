@@ -2,14 +2,14 @@
 /**
  * Integration tests for per-popup appearance overrides.
  *
- * Colours, border, corner rounding, font and text size, plus the `lower_third`
+ * Colors, border, corner rounding, font and text size, plus the `lower_third`
  * banner position.
  *
- * ## Why the colour tests are the important ones
+ * ## Why the color tests are the important ones
  *
- * Everything else an author can customise is a step on a scale — `thick`,
+ * Everything else an author can customize is a step on a scale — `thick`,
  * `large` — so what reaches the page is a token this plugin defines and nothing
- * an author types is ever parsed as CSS. Colours cannot work that way: a colour
+ * an author types is ever parsed as CSS. Colors cannot work that way: a color
  * has no scale to be a step on, so it travels as a literal and is printed into a
  * `style` attribute.
  *
@@ -27,12 +27,12 @@ use Popkit\Post_Type;
 use Popkit\Renderer;
 
 /**
- * Integration coverage for display customisation.
+ * Integration coverage for display customization.
  */
-final class Test_Popkit_Display_Customisation extends WP_UnitTestCase {
+final class Test_Popkit_Display_Customization extends WP_UnitTestCase {
 
 	/**
-	 * A popup with no overrides emits none of the customisation hooks.
+	 * A popup with no overrides emits none of the customization hooks.
 	 *
 	 * The compatibility guarantee: every override defaults to "leave the theme
 	 * alone", so a popup authored before this feature existed renders exactly as
@@ -40,17 +40,17 @@ final class Test_Popkit_Display_Customisation extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	public function test_an_uncustomised_popup_emits_no_overrides() {
+	public function test_an_uncustomized_popup_emits_no_overrides() {
 		$html = $this->render( array() );
 
-		$this->assertStringNotContainsString( 'style=', $html, 'No colour override means no style attribute at all.' );
+		$this->assertStringNotContainsString( 'style=', $html, 'No color override means no style attribute at all.' );
 		$this->assertStringNotContainsString( 'data-popkit-radius', $html );
 		$this->assertStringNotContainsString( 'data-popkit-font', $html );
 		$this->assertStringNotContainsString( 'data-popkit-border-width', $html );
 	}
 
 	/**
-	 * Chosen colours reach the tokens the shipped themes set.
+	 * Chosen colors reach the tokens the shipped themes set.
 	 *
 	 * Feeding the same tokens is what makes an override work everywhere without a
 	 * parallel set of rules: one declaration reads `--popkit-surface` and does not
@@ -58,7 +58,7 @@ final class Test_Popkit_Display_Customisation extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	public function test_colours_are_emitted_as_the_theme_tokens() {
+	public function test_colors_are_emitted_as_the_theme_tokens() {
 		$html = $this->render(
 			array(
 				'custom_background'   => '#102030',
@@ -77,15 +77,15 @@ final class Test_Popkit_Display_Customisation extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A colour that is not a hex triplet is refused, not partially kept.
+	 * A color that is not a hex triplet is refused, not partially kept.
 	 *
 	 * Each of these is a real way to end a declaration and start another one. A
-	 * refused colour stores as empty, which the renderer reads as "use the theme"
+	 * refused color stores as empty, which the renderer reads as "use the theme"
 	 * — falling back to a value whose contrast has actually been measured.
 	 *
 	 * @return void
 	 */
-	public function test_a_colour_that_could_carry_css_is_refused() {
+	public function test_a_color_that_could_carry_css_is_refused() {
 		$attacks = array(
 			'#fff;position:fixed;inset:0',
 			'red;background:url(https://example.com/x)',
@@ -102,7 +102,7 @@ final class Test_Popkit_Display_Customisation extends WP_UnitTestCase {
 			$this->assertSame(
 				'',
 				$stored['custom_background'],
-				sprintf( 'A colour of "%s" must be refused outright rather than trimmed to something plausible.', $attack )
+				sprintf( 'A color of "%s" must be refused outright rather than trimmed to something plausible.', $attack )
 			);
 		}
 

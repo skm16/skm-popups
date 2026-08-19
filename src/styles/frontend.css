@@ -2,12 +2,12 @@
  * popkit — frontend stylesheet, bundle entry point for dist/frontend.css.
  *
  * Phase 2 scope, and no more: the `--popkit-` token namespace, enough layout to
- * centre a modal and pin a banner, the overlay, and the close button's 44x44
+ * center a modal and pin a banner, the overlay, and the close button's 44x44
  * hit area. Phase 6 owns themes, and it owns them alone — there is not one
- * colour scheme in this file, because every shipped theme has to clear WCAG 2.2
+ * color scheme in this file, because every shipped theme has to clear WCAG 2.2
  * AA in both layouts and that is a budget of its own to spend.
  *
- * The two colours here are `Canvas` and `CanvasText`, which are the user
+ * The two colors here are `Canvas` and `CanvasText`, which are the user
  * agent's own pair: they follow the platform's light or dark preference and
  * forced-colors mode, and they cannot fail a contrast check against each other.
  * They are the neutral default a theme token overrides, not a theme.
@@ -80,9 +80,9 @@
 	--popkit-focus: CanvasText;
 
 	/*
-	 * Links and buttons inside the content. `currentColor` rather than a colour
+	 * Links and buttons inside the content. `currentColor` rather than a color
 	 * of its own, so the shipped themes need say nothing about it and an unset
-	 * accent is exactly the body text colour — which is what the contrast
+	 * accent is exactly the body text color — which is what the contrast
 	 * measurements in themes.css were taken against.
 	 */
 	--popkit-accent: currentColor;
@@ -288,7 +288,7 @@ dialog.popkit-popup--no-overlay::backdrop {
  * close button is a sibling of this element rather than a descendant, so no
  * amount of scrolling here can move it. `min-height: 0` is the same
  * flex-item concession the container makes, spelled out rather than left to the
- * rule that a scroll container's automatic minimum size is zero — the behaviour
+ * rule that a scroll container's automatic minimum size is zero — the behavior
  * this file depends on should not be a side effect of `overflow`.
  *
  * `overscroll-behavior` stops a scroll that reaches the end of the content from
@@ -319,12 +319,12 @@ dialog.popkit-popup--no-overlay::backdrop {
 }
 
 /*
- * Reclaim the text colour from the active theme.
+ * Reclaim the text color from the active theme.
  *
- * A popup paints its own surface, and the theme has no idea what colour that is.
- * Block themes set heading and link colours explicitly — Twenty Twenty-Four
+ * A popup paints its own surface, and the theme has no idea what color that is.
+ * Block themes set heading and link colors explicitly — Twenty Twenty-Four
  * emits `:root :where(h1, h2, …) { color: var(--wp--preset--color--contrast) }`
- * — and those rules win over the colour inherited from `__container`, because
+ * — and those rules win over the color inherited from `__container`, because
  * inheritance loses to any declaration at all.
  *
  * The result is not subtle and was found by looking at a screenshot rather than
@@ -335,16 +335,16 @@ dialog.popkit-popup--no-overlay::backdrop {
  *
  * Two things are deliberately *not* overridden:
  *
- * - Anything the author coloured. Block colour support adds `.has-text-color`
+ * - Anything the author colored. Block color support adds `.has-text-color`
  *   for a preset and an inline `style` for a custom value, so `:not()` on that
- *   class leaves both alone. An author who chose a colour meant it.
+ *   class leaves both alone. An author who chose a color meant it.
  * - `.wp-element-button`, which is a link painted as a button with its own
  *   background. Forcing `color: inherit` there produces a button whose label
  *   matches the popup surface rather than the button.
  *
- * Links keep an underline as well as taking the colour. Once a link is the same
- * colour as the text around it, colour cannot be what distinguishes it, and WCAG
- * 1.4.1 asks for something other than colour anyway. Most themes already
+ * Links keep an underline as well as taking the color. Once a link is the same
+ * color as the text around it, color cannot be what distinguishes it, and WCAG
+ * 1.4.1 asks for something other than color anyway. Most themes already
  * underline; declaring it here means the rule does not depend on that.
  */
 .popkit-popup__content
@@ -399,7 +399,7 @@ dialog.popkit-popup--no-overlay::backdrop {
 
 /*
  * Clipped, never `display: none` and never `visibility: hidden` — either of
- * those removes the button's only accessible name and leaves an unlabelled
+ * those removes the button's only accessible name and leaves an unlabeled
  * control, which is the failure this text exists to prevent.
  */
 .popkit-popup__close-text {
@@ -459,14 +459,14 @@ dialog.popkit-popup--no-overlay::backdrop {
  *
  * The renderer writes a `data-popkit-*` attribute for each scale an author moved
  * off `inherit`, and writes nothing at all for the ones they did not touch — so
- * a popup with no customisation matches none of these rules and is byte-for-byte
+ * a popup with no customization matches none of these rules and is byte-for-byte
  * what it was before this feature existed.
  *
  * Scales, not measurements. A popup stores `thick`; what `thick` is, is decided
  * here. That keeps the design values in the stylesheet with the rest of the
  * design, and means a later release can retune a step without migrating stored
  * popups — and, more importantly, that nothing an author types is ever parsed as
- * CSS. Colours are the exception and cannot be a scale, which is exactly why
+ * CSS. Colors are the exception and cannot be a scale, which is exactly why
  * `Meta::sanitize_color()` reduces them to a hex triplet before they get here.
  *
  * These set tokens rather than properties. A token is read by the rules that

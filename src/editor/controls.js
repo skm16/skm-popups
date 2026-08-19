@@ -79,6 +79,7 @@ import { createElement, Fragment } from '@wordpress/element';
 
 import {
 	CheckboxControl,
+	ColorPalette,
 	DateTimePicker,
 	FormTokenField,
 	RangeControl,
@@ -145,20 +146,40 @@ export function coerce( schema, raw ) {
 }
 
 /**
- * Builds `SelectControl` options from a field's `enum`.
+ * The text one enum member is offered under.
  *
- * The enum member is used as its own label. Registrations declare enums as
- * stored vocabulary — `logged_in`, `prefix` — and there is no label map in the
- * field schema to read a friendlier string from. Inventing one here would mean
- * this file carrying a translation table for every condition any plugin might
- * register, which is the coupling the registry exists to avoid.
+ * A registration may declare `enum_labels` beside its `enum`, mapping each
+ * stored token to an already-translated string; `Condition::validate_enum_labels()`
+ * checks at registration time that the map covers the enum exactly. Where there
+ * is no map, the member labels itself.
+ *
+ * That fallback is not a placeholder to be replaced later — it is the contract.
+ * Enums are stored vocabulary (`logged_in`, `prefix`), and this file cannot
+ * carry a translation table for every condition any plugin might register
+ * without becoming the coupling the registry exists to avoid. So the friendly
+ * string travels *with* the registration, through the same REST payload as the
+ * rest of the schema, and a registration that declares none still renders a
+ * working control.
+ *
+ * @param {Object} schema Field schema from the registry.
+ * @param {*}      member One member of the field's enum.
+ * @return {string} Label.
+ */
+function enumLabel( schema, member ) {
+	const label = schema?.enum_labels?.[ String( member ) ];
+
+	return 'string' === typeof label && '' !== label ? label : String( member );
+}
+
+/**
+ * Builds `SelectControl` options from a field's `enum`.
  *
  * @param {Object} schema Field schema from the registry.
  * @return {Array<{label: string, value: string}>} Select options.
  */
 function enumOptions( schema ) {
 	return ( schema?.enum ?? [] ).map( ( member ) => ( {
-		label: String( member ),
+		label: enumLabel( schema, member ),
 		value: String( member ),
 	} ) );
 }
@@ -332,7 +353,7 @@ function MultiSelectField( { schema, label, value, onChange, disabled } ) {
 					<CheckboxControl
 						__nextHasNoMarginBottom
 						key={ String( member ) }
-						label={ String( member ) }
+						label={ enumLabel( schema, member ) }
 						checked={ selected
 							.map( String )
 							.includes( String( member ) ) }
@@ -535,7 +556,7 @@ function TaxonomyField( props ) {
  * would be off by the site's offset — invisibly, and only for sites not on UTC.
  *
  * The field schema is not read. `date-time` has no bounds, no length cap and no
- * enum to honour — the only constraint on the value is that it parses, which is
+ * enum to honor — the only constraint on the value is that it parses, which is
  * enforced on the way out rather than declared.
  *
  * @param {Object}   props          Control props.
@@ -567,6 +588,56 @@ function DateTimeField( { label, value, onChange, disabled } ) {
 							: undefined
 					);
 				} }
+			/>
+		</fieldset>
+	);
+}
+
+/**
+ * A color, stored as a hex string, with blank as a first-class value.
+ *
+ * `ColorPalette` rather than `ColorPicker`, and `clearable` rather than the
+ * default, for one reason: this control has to be able to say *nothing*. A blank
+ * color means "keep whatever the theme chose", and the theme's colors are the
+ * pair whose contrast has actually been measured — so an author who opens the
+ * control, looks around and changes their mind must be able to get back to
+ * blank. `ColorPicker` has no empty state and would have quietly committed them
+ * to a color by being opened.
+ *
+ * Clearing emits an empty string rather than `undefined`, because empty is what
+ * `Meta::sanitize_color()` reads as "no override". `undefined` would work by
+ * accident — the key would drop out of the JSON and the sanitizer would default
+ * it to empty — but it would mean the editor and the database disagreed about
+ * what the author had just done for as long as the page stayed open.
+ *
+ * No palette is supplied. A popkit-branded set of swatches would be swatches
+ * chosen against no particular site, and the sites this runs on have their own.
+ *
+ * @param {Object}   props          Control props.
+ * @param {string}   props.label    Control label.
+ * @param {*}        props.value    Current value.
+ * @param {Function} props.onChange Change handler.
+ * @param {boolean}  props.disabled Whether the control is read-only.
+ * @return {JSX.Element} Control.
+ */
+function ColorField( { label, value, onChange, disabled } ) {
+	const current =
+		'string' === typeof value && '' !== value ? value : undefined;
+
+	return (
+		<fieldset
+			className="popkit-field popkit-field--color"
+			disabled={ disabled }
+		>
+			<legend className="popkit-field__legend">{ label }</legend>
+			<ColorPalette
+				colors={ [] }
+				value={ current }
+				clearable
+				enableAlpha={ false }
+				onChange={ ( next ) =>
+					onChange( 'string' === typeof next ? next : '' )
+				}
 			/>
 		</fieldset>
 	);
@@ -657,6 +728,7 @@ export const CONTROLS = new Map( [
 	[ 'taxonomy-select', TaxonomyField ],
 	[ 'date-time', DateTimeField ],
 	[ 'url-match', UrlMatchField ],
+	[ 'color', ColorField ],
 ] );
 
 /**

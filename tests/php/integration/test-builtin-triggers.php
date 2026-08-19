@@ -210,7 +210,7 @@ final class Test_Popkit_Builtin_Triggers extends WP_UnitTestCase {
 	 * No trigger deferred to 1.1 is registered.
 	 *
 	 * These four are deferred deliberately in docs/data-model.md, `exit_intent`
-	 * most of all: it ships only when its mobile behaviour is honest, and history
+	 * most of all: it ships only when its mobile behavior is honest, and history
 	 * interception is rejected permanently. Shipping one early would put a control
 	 * in the editor that no runtime implements.
 	 *
@@ -270,7 +270,7 @@ final class Test_Popkit_Builtin_Triggers extends WP_UnitTestCase {
 				);
 
 				$this->assertArrayHasKey( 'type', $schema, sprintf( 'The field "%s" on trigger "%s" declares no type. Sanitization is derived from that declaration.', $name, $trigger->key ) );
-				$this->assertArrayHasKey( 'label', $schema, sprintf( 'The field "%s" on trigger "%s" declares no label. An unlabelled control is not accessible.', $name, $trigger->key ) );
+				$this->assertArrayHasKey( 'label', $schema, sprintf( 'The field "%s" on trigger "%s" declares no label. An unlabeled control is not accessible.', $name, $trigger->key ) );
 			}
 		}
 	}

@@ -11,6 +11,7 @@ namespace Popkit\Conditions;
 use Popkit\Condition;
 use Popkit\Context;
 use Popkit\Url_Matcher;
+use Popkit\Vocabulary;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -29,7 +30,7 @@ defined( 'ABSPATH' ) || exit;
  * | Key | Fields | Answers |
  * |---|---|---|
  * | `template` | `templates: string[]` | Which page template the queried post was assigned. |
- * | `url_path` | `match`, `value` | Whether the normalised request path matches a literal. |
+ * | `url_path` | `match`, `value` | Whether the normalized request path matches a literal. |
  *
  * Field schemas only, plus the evaluation each one needs. There is no
  * `Abstract_Condition` to inherit from and no sanitization here: a field's `type`
@@ -82,20 +83,20 @@ defined( 'ABSPATH' ) || exit;
  *
  * ## What `url_path` matches
  *
- * The normalised path of the current request, through
- * {@see Url_Matcher::normalise_path()} and then {@see Url_Matcher::matches()}.
+ * The normalized path of the current request, through
+ * {@see Url_Matcher::normalize_path()} and then {@see Url_Matcher::matches()}.
  * That class is the plugin's only matcher and this condition adds nothing to it:
- * no second normaliser, no second glob, and no pattern language. Matching is
+ * no second normalizer, no second glob, and no pattern language. Matching is
  * linear and case-insensitive, the query string and the fragment are already gone
  * by the time a comparison happens, and the path is decoded exactly once —
- * inside `normalise_path()`, which is why nothing here decodes it again.
+ * inside `normalize_path()`, which is why nothing here decodes it again.
  *
  * Two limits worth stating plainly, because both are visible to an author:
  *
  * - The path is the one the request carried, so on an installation in a
  *   subdirectory it includes that subdirectory. A rule for a site served from
  *   `/blog/` is written `/blog/campaigns/`, not `/campaigns/`.
- * - A trailing slash is significant. `normalise_path()` preserves it, so `/about`
+ * - A trailing slash is significant. `normalize_path()` preserves it, so `/about`
  *   and `/about/` are different paths, and reconciling them is a decision for the
  *   author rather than a rewrite this plugin performs on their behalf.
  *
@@ -277,7 +278,7 @@ final class Url_Conditions {
 	}
 
 	/**
-	 * Matches the normalised path of the current request.
+	 * Matches the normalized path of the current request.
 	 *
 	 * The two fields are the constrained match language in `docs/CLAUDE.md` ->
 	 * Security -> URL match language, declared from {@see Url_Matcher} rather than
@@ -301,11 +302,12 @@ final class Url_Conditions {
 			__( 'URL path', 'popkit' ),
 			array(
 				'match' => array(
-					'type'    => 'enum',
-					'enum'    => Url_Matcher::modes(),
-					'default' => 'exact',
-					'label'   => __( 'How the path is compared', 'popkit' ),
-					'control' => 'select',
+					'type'        => 'enum',
+					'enum'        => Url_Matcher::modes(),
+					'enum_labels' => Vocabulary::url_match_modes(),
+					'default'     => 'exact',
+					'label'       => __( 'How the path is compared', 'popkit' ),
+					'control'     => 'select',
 				),
 				'value' => array(
 					'type'       => 'string',
@@ -382,7 +384,7 @@ final class Url_Conditions {
 	 *
 	 * Both guards below return null where {@see Url_Matcher::matches()} would have
 	 * returned false, and the difference matters. That method's runtime refusals —
-	 * an unrecognised mode, a value past the cap — are documented as non-matches so
+	 * an unrecognized mode, a value past the cap — are documented as non-matches so
 	 * a page render never fatals on stored data. A non-match is a decision, and
 	 * `negate` inverts a decision, so passing those cases straight through would
 	 * let a rule that should never have reached the database widen a popup's
@@ -463,7 +465,7 @@ final class Url_Conditions {
 	}
 
 	/**
-	 * Returns the normalised path of the current request.
+	 * Returns the normalized path of the current request.
 	 *
 	 * The request target is URL-derived and therefore cache-safe — two requests to
 	 * the same URL agree on it, whoever sends them — and it is also untrusted
@@ -473,10 +475,10 @@ final class Url_Conditions {
 	 * counts. It removes exactly the bytes that cannot appear in a request target —
 	 * control characters, whitespace, and everything outside the ASCII set RFC 1738
 	 * permits — while leaving percent-encoding untouched, which
-	 * {@see Url_Matcher::normalise_path()} requires: that method decodes once, on
+	 * {@see Url_Matcher::normalize_path()} requires: that method decodes once, on
 	 * purpose, having already decided where the query and fragment begin. A
 	 * sanitizer that stripped `%41` or decoded it early would either corrupt the
-	 * path or hand the normaliser a string whose structure had already been
+	 * path or hand the normalizer a string whose structure had already been
 	 * rewritten. And it is a byte-table filter rather than a pattern match, so no
 	 * expression is compiled against request input anywhere on this path.
 	 *
@@ -494,7 +496,7 @@ final class Url_Conditions {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @return string|null Normalised path, or null when the request carries none.
+	 * @return string|null Normalized path, or null when the request carries none.
 	 */
 	private static function request_path(): ?string {
 		if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
@@ -507,7 +509,7 @@ final class Url_Conditions {
 			return null;
 		}
 
-		return Url_Matcher::normalise_path( $target );
+		return Url_Matcher::normalize_path( $target );
 	}
 
 	/**

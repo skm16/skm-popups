@@ -31,37 +31,7 @@ import { SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 import { FieldControl } from '../controls.js';
-
-/**
- * Frequency modes, matching `Meta::FREQUENCY_MODES`.
- *
- * @type {Array<{value: string, label: string}>}
- */
-const MODES = [
-	{ value: 'always', label: __( 'Every time it is eligible', 'popkit' ) },
-	{ value: 'once_per_session', label: __( 'Once per session', 'popkit' ) },
-	{
-		value: 'once_per_days',
-		label: __( 'Once every so many days', 'popkit' ),
-	},
-	{ value: 'once_ever', label: __( 'Once, ever', 'popkit' ) },
-];
-
-/**
- * What a conversion does, matching `Meta::FREQUENCY_ON_CONVERT`.
- *
- * @type {Array<{value: string, label: string}>}
- */
-const ON_CONVERT = [
-	{
-		value: 'suppress_forever',
-		label: __( 'Never show it to them again', 'popkit' ),
-	},
-	{
-		value: 'none',
-		label: __( 'Keep showing it under the rule above', 'popkit' ),
-	},
-];
+import { labelOptions } from '../registry.js';
 
 /**
  * Field schema for the day-count control.
@@ -82,12 +52,13 @@ const DAYS_SCHEMA = {
 /**
  * The frequency panel body.
  *
- * @param {Object}   props           Props.
- * @param {Object}   props.frequency Stored frequency.
- * @param {Function} props.onChange  Called with the updated frequency.
+ * @param {Object}   props            Props.
+ * @param {Object}   props.frequency  Stored frequency.
+ * @param {Function} props.onChange   Called with the updated frequency.
+ * @param {Object}   props.vocabulary Label maps from the registry.
  * @return {JSX.Element} Panel body.
  */
-export function FrequencyPanel( { frequency, onChange } ) {
+export function FrequencyPanel( { frequency, onChange, vocabulary } ) {
 	const mode = frequency?.mode ?? 'always';
 
 	return (
@@ -97,7 +68,7 @@ export function FrequencyPanel( { frequency, onChange } ) {
 				__nextHasNoMarginBottom
 				label={ __( 'Show this popup', 'popkit' ) }
 				value={ mode }
-				options={ MODES }
+				options={ labelOptions( vocabulary?.modes ) }
 				onChange={ ( next ) =>
 					onChange( { ...frequency, mode: next } )
 				}
@@ -120,7 +91,7 @@ export function FrequencyPanel( { frequency, onChange } ) {
 					'popkit'
 				) }
 				value={ frequency?.on_convert ?? 'suppress_forever' }
-				options={ ON_CONVERT }
+				options={ labelOptions( vocabulary?.onConvert ) }
 				onChange={ ( next ) =>
 					onChange( { ...frequency, on_convert: next } )
 				}

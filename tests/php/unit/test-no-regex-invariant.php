@@ -12,7 +12,7 @@
  * Security -> URL match language.
  *
  * That is a property of the whole tree, not of one class. A single
- * `preg_match()` added anywhere in includes/ — in a sanitizer normalising a
+ * `preg_match()` added anywhere in includes/ — in a sanitizer normalizing a
  * path, in a REST argument validator, in a helper that looked like it needed
  * "just a quick pattern" — reintroduces an unbounded matcher on request-shaped
  * input and quietly voids the guarantee, while every existing test stays green.
@@ -44,7 +44,7 @@
  * call PCRE and a snippet that only talks about it, and assert it separates the
  * two. Without them, a scan that had silently stopped tokenizing — a renamed
  * constant, an empty file list, a swallowed parse error — would report an empty
- * offence list and look exactly like a clean tree.
+ * offense list and look exactly like a clean tree.
  *
  * @package Popkit
  */
@@ -100,7 +100,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	 * `$object->preg_match()`, `$object?->preg_match()` and `Klass::preg_match()`
 	 * call a method that merely shares a name with a PHP function; `function
 	 * preg_match()` declares one; `new preg_match()` instantiates a class. None of
-	 * them reaches PCRE, and treating them as offences would make the guard fire
+	 * them reaches PCRE, and treating them as offenses would make the guard fire
 	 * on code that is not the thing being guarded against.
 	 *
 	 * @var int[]
@@ -118,7 +118,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	 * The tokenizer extension is present.
 	 *
 	 * Every assertion in this file is worthless without it, and a scan that cannot
-	 * tokenize would otherwise return an empty offence list — indistinguishable
+	 * tokenize would otherwise return an empty offense list — indistinguishable
 	 * from a clean tree. Assert rather than skip: a security invariant that
 	 * silently opts out of being checked is worse than one that was never written.
 	 *
@@ -164,7 +164,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	 * @return void
 	 */
 	public function test_no_regex_function_is_called_under_includes() {
-		$offences = array();
+		$offenses = array();
 
 		foreach ( self::php_files_under_includes() as $relative_path ) {
 			$absolute_path = self::plugin_dir() . '/' . $relative_path;
@@ -175,19 +175,19 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 				sprintf( '%s could not be read, so it was never scanned for regex calls.', $relative_path )
 			);
 
-			$offences = array_merge( $offences, self::offences_in_source( $source, $relative_path ) );
+			$offenses = array_merge( $offenses, self::offenses_in_source( $source, $relative_path ) );
 		}
 
 		$this->assertSame(
 			array(),
-			$offences,
-			"A regex function is called under includes/, which voids popkit's bounded-matching guarantee. URL targeting uses the constrained match language in docs/CLAUDE.md -> Security -> URL match language; extend Popkit\\Url_Matcher instead of reaching for PCRE. Offences:"
-				. PHP_EOL . implode( PHP_EOL, $offences )
+			$offenses,
+			"A regex function is called under includes/, which voids popkit's bounded-matching guarantee. URL targeting uses the constrained match language in docs/CLAUDE.md -> Security -> URL match language; extend Popkit\\Url_Matcher instead of reaching for PCRE. Offenses:"
+				. PHP_EOL . implode( PHP_EOL, $offenses )
 		);
 	}
 
 	/**
-	 * The scan recognises a real call, and reports where it is.
+	 * The scan recognizes a real call, and reports where it is.
 	 *
 	 * A guard nobody has watched fail is a guess. This drives the scanner with a
 	 * snippet that does call PCRE and asserts both halves of a useful failure: that
@@ -201,17 +201,17 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 			. "\$normalized = trim( \$path );\n"
 			. "\$hit        = preg_match( \$pattern, \$normalized );\n";
 
-		$offences = self::offences_in_source( $snippet, 'includes/class-fixture.php' );
+		$offenses = self::offenses_in_source( $snippet, 'includes/class-fixture.php' );
 
 		$this->assertCount(
 			1,
-			$offences,
+			$offenses,
 			'The scanner did not detect a plain preg_match() call. It is not enforcing anything.'
 		);
 
-		$this->assertStringContainsString( 'includes/class-fixture.php', $offences[0], 'A failure must name the offending file.' );
-		$this->assertStringContainsString( ':3', $offences[0], 'A failure must name the offending line.' );
-		$this->assertStringContainsString( 'preg_match', $offences[0], 'A failure must name the offending function.' );
+		$this->assertStringContainsString( 'includes/class-fixture.php', $offenses[0], 'A failure must name the offending file.' );
+		$this->assertStringContainsString( ':3', $offenses[0], 'A failure must name the offending line.' );
+		$this->assertStringContainsString( 'preg_match', $offenses[0], 'A failure must name the offending function.' );
 	}
 
 	/**
@@ -233,11 +233,11 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 			);
 
 			foreach ( $spellings as $spelling ) {
-				$offences = self::offences_in_source( "<?php\n\$r = " . $spelling . ";\n", 'includes/class-fixture.php' );
+				$offenses = self::offenses_in_source( "<?php\n\$r = " . $spelling . ";\n", 'includes/class-fixture.php' );
 
 				$this->assertCount(
 					1,
-					$offences,
+					$offenses,
 					sprintf( 'The scanner missed `%s`. A name it cannot see is a name that can be reintroduced.', $spelling )
 				);
 			}
@@ -245,7 +245,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	}
 
 	/**
-	 * Comments, string literals and same-named methods are not offences.
+	 * Comments, string literals and same-named methods are not offenses.
 	 *
 	 * This is the half that keeps the invariant documentable. If explaining why
 	 * regex is forbidden trips the guard, the explanation gets deleted and the
@@ -273,7 +273,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 
 		$this->assertSame(
 			array(),
-			self::offences_in_source( $snippet, 'includes/class-fixture.php' ),
+			self::offenses_in_source( $snippet, 'includes/class-fixture.php' ),
 			'The scanner flagged prose, a string literal or a method that merely shares a name with a PHP function. A guard that punishes documenting the invariant guarantees the documentation is what gets removed.'
 		);
 	}
@@ -281,7 +281,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	/**
 	 * Returns the call-shaped regex occurrences in one PHP source string.
 	 *
-	 * Only `token_get_all()` decides what is code here. An identifier is an offence
+	 * Only `token_get_all()` decides what is code here. An identifier is an offense
 	 * when it names a forbidden function, is followed by `(`, and is not preceded
 	 * by one of the operators in NON_CALL_PREFIXES. Qualified names are reduced to
 	 * their final segment, so `\preg_match()` and `Vendor\preg_match()` are both
@@ -290,10 +290,10 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	 *
 	 * @param string $source PHP source, including the opening tag.
 	 * @param string $label  Path to name in the message, relative to the plugin root.
-	 * @return string[] One human-readable sentence per offence; empty when there are none.
+	 * @return string[] One human-readable sentence per offense; empty when there are none.
 	 */
-	private static function offences_in_source( $source, $label ) {
-		$offences = array();
+	private static function offenses_in_source( $source, $label ) {
+		$offenses = array();
 		$tokens   = token_get_all( $source );
 		$total    = count( $tokens );
 
@@ -326,10 +326,10 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 				continue;
 			}
 
-			$offences[] = sprintf( '  %1$s:%2$d calls %3$s()', $label, (int) $token[2], $name );
+			$offenses[] = sprintf( '  %1$s:%2$d calls %3$s()', $label, (int) $token[2], $name );
 		}
 
-		return $offences;
+		return $offenses;
 	}
 
 	/**
@@ -350,7 +350,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	 * @param array $tokens    Tokens as returned by token_get_all().
 	 * @param int   $from      Index to start from; not itself considered.
 	 * @param int   $direction 1 to look forwards, -1 to look backwards.
-	 * @return int|null Index of the neighbouring significant token, or null at the end of the run.
+	 * @return int|null Index of the neighboring significant token, or null at the end of the run.
 	 */
 	private static function significant_index( array $tokens, $from, $direction ) {
 		$skippable = array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT );
@@ -369,7 +369,7 @@ final class Test_Popkit_No_Regex_Invariant extends TestCase {
 	/**
 	 * Returns every PHP file under includes/, as forward-slashed relative paths.
 	 *
-	 * Sorted, so a failure lists offences in the same order on every machine.
+	 * Sorted, so a failure lists offenses in the same order on every machine.
 	 *
 	 * @return string[] Paths relative to the plugin root, e.g. `includes/class-url-matcher.php`.
 	 */

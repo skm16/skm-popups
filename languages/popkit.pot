@@ -197,33 +197,33 @@ msgstr ""
 
 #: includes/class-classic-editor.php:690
 #: src/editor/panels/display.js:59
-msgid "Background colour"
+msgid "Background color"
 msgstr ""
 
 #: includes/class-classic-editor.php:691
 #: src/editor/panels/display.js:60
-msgid "Text colour"
+msgid "Text color"
 msgstr ""
 
 #: includes/class-classic-editor.php:692
 #: src/editor/panels/display.js:61
-msgid "Link colour"
+msgid "Link color"
 msgstr ""
 
 #: includes/class-classic-editor.php:693
 #: src/editor/panels/display.js:62
-msgid "Border colour"
+msgid "Border color"
 msgstr ""
 
 #: includes/class-classic-editor.php:696
-msgid "Customise this popup"
+msgid "Customize this popup"
 msgstr ""
 
 #: includes/class-classic-editor.php:698
-msgid "Leave a colour blank to keep the theme’s own. Check the contrast between your background and text colours before publishing — the shipped themes are measured, a custom pair is not."
+msgid "Leave a color blank to keep the theme’s own. Check the contrast between your background and text colors before publishing — the shipped themes are measured, a custom pair is not."
 msgstr ""
 
-#. translators: %s: name of the colour being set, e.g. "Background colour".
+#. translators: %s: name of the color being set, e.g. "Background color".
 #: includes/class-classic-editor.php:710
 #, php-format
 msgid "%s — hex value such as #ffffff, or blank for the theme"
@@ -268,7 +268,7 @@ msgstr ""
 #. translators: %s: condition key.
 #: includes/class-condition.php:281
 #, php-format
-msgid "The popkit condition `%s` must declare a non-empty label. The editor has no other way to name its control, and an unlabelled control is not accessible."
+msgid "The popkit condition `%s` must declare a non-empty label. The editor has no other way to name its control, and an unlabeled control is not accessible."
 msgstr ""
 
 #. translators: 1: registry key being registered, 2: the rejected field name.
@@ -524,7 +524,7 @@ msgid "What a conversion does to the cap."
 msgstr ""
 
 #: includes/class-meta.php:1058
-msgid "Hex colour overriding the chosen theme, or an empty string to keep it."
+msgid "Hex color overriding the chosen theme, or an empty string to keep it."
 msgstr ""
 
 #: includes/class-meta.php:1067
@@ -548,7 +548,7 @@ msgid "Width of the popup."
 msgstr ""
 
 #: includes/class-meta.php:1097
-msgid "Where the popup sits. A modal is centred or at the top; a banner is at the top or the bottom."
+msgid "Where the popup sits. A modal is centered or at the top; a banner is at the top or the bottom."
 msgstr ""
 
 #: includes/class-meta.php:1103
@@ -944,7 +944,7 @@ msgstr ""
 #. translators: %s: trigger key.
 #: includes/class-trigger.php:108
 #, php-format
-msgid "The popkit trigger `%s` must declare a non-empty label. The editor has no other way to name it, and an unlabelled control is not accessible."
+msgid "The popkit trigger `%s` must declare a non-empty label. The editor has no other way to name it, and an unlabeled control is not accessible."
 msgstr ""
 
 #: includes/class-triggers.php:72
@@ -1290,7 +1290,7 @@ msgid "Large"
 msgstr ""
 
 #: src/editor/panels/display.js:126
-msgid "Centred"
+msgid "Centered"
 msgstr ""
 
 #: src/editor/panels/display.js:127
@@ -1362,11 +1362,11 @@ msgid "Slide"
 msgstr ""
 
 #: src/editor/panels/display.js:286
-msgid "A hex value such as #ffffff. Leave blank to keep the theme’s own colour."
+msgid "A hex value such as #ffffff. Leave blank to keep the theme’s own color."
 msgstr ""
 
 #: src/editor/panels/display.js:312
-msgid "Check the contrast between your background and text colours before publishing. The shipped themes are measured against WCAG AA; a pair you choose is not."
+msgid "Check the contrast between your background and text colors before publishing. The shipped themes are measured against WCAG AA; a pair you choose is not."
 msgstr ""
 
 #: src/editor/panels/frequency.js:41

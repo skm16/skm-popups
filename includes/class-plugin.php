@@ -109,14 +109,14 @@ final class Plugin {
 		 * since 4.6: the first call to `__()` with a domain triggers a
 		 * just-in-time load from `WP_LANG_DIR/plugins/{domain}-{locale}.mo`,
 		 * which is where language packs land. Calling the function as well loads
-		 * the same catalogue a second time, and Plugin Check — the gate this
+		 * the same catalog a second time, and Plugin Check — the gate this
 		 * plugin has to pass to be listed — reports it.
 		 *
 		 * What is given up is bundled translations: a `.mo` shipped inside the
 		 * plugin's own `languages/` directory is *not* found by the just-in-time
 		 * loader. That is the right trade here. popkit ships a `.pot` for
 		 * translators and takes its translations from the repository, which is
-		 * how a hosted plugin is meant to work — and a bundled catalogue would
+		 * how a hosted plugin is meant to work — and a bundled catalog would
 		 * go stale against the one translate.wordpress.org serves.
 		 *
 		 * The `Domain Path` header stays. It is what tells
@@ -275,7 +275,7 @@ final class Plugin {
 	 * WordPress already knows: the `auth_callback` on every key resolves
 	 * `edit_post` through `map_meta_cap()`, and that resolution needs the
 	 * capability map declared at post type registration. Reversing these two lines
-	 * would leave the meta keys authorised against core's `post` capabilities
+	 * would leave the meta keys authorized against core's `post` capabilities
 	 * instead, which fails open for anyone holding `edit_posts`.
 	 *
 	 * @since 0.1.0

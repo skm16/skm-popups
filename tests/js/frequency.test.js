@@ -430,7 +430,7 @@ describe( 'isSuppressed -> on_convert', () => {
 		).toBe( true );
 	} );
 
-	it( 'honours a conversion recorded only in sessionStorage', () => {
+	it( 'honors a conversion recorded only in sessionStorage', () => {
 		seed( session, { at: NOW, converted: true } );
 
 		expect( isSuppressed( POPUP_ID, { mode: 'always' } ) ).toBe( true );

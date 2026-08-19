@@ -80,7 +80,7 @@ enum Context: string {
 	public function is_deferred_to_client(): bool {
 		/*
 		 * The annotation below suppresses a false positive, not a real finding.
-		 * PHPCompatibility 9.3.5 predates PHP 8.1 and does not recognise an enum
+		 * PHPCompatibility 9.3.5 predates PHP 8.1 and does not recognize an enum
 		 * method as an object context, so it reads the line as $this inside a
 		 * plain function. Enum methods are instance methods on the case and
 		 * $this is valid inside them, and the comparison cannot be expressed

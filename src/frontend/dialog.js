@@ -25,7 +25,7 @@
  *   of the page, and the top-layer stacking. **No focus trap is hand-rolled on
  *   top of it.** A second implementation of a trap the browser already runs is
  *   how Tab ends up escaping in exactly one browser.
- * - Escape is native `<dialog>` behaviour and is never `preventDefault()`ed. The
+ * - Escape is native `<dialog>` behavior and is never `preventDefault()`ed. The
  *   `cancel` listener here observes Escape to label the close reason; it does
  *   not intercept it.
  * - Initial focus goes to the dialog container, or failing that its heading.
@@ -46,7 +46,7 @@
  * - `prefers-reduced-motion` is not read here. Motion belongs to the stylesheet
  *   (`docs/CLAUDE.md` -> Accessibility: animations become instant, not merely
  *   faster), and this module never waits on an animation or transition before
- *   completing a close, so honouring the preference stays a pure CSS media
+ *   completing a close, so honoring the preference stays a pure CSS media
  *   query with no JavaScript branch to get wrong.
  *
  * Banners are not dialogs. They are shown and hidden with the `hidden`
@@ -189,7 +189,7 @@ function flushClosed( element ) {
 		return;
 	}
 
-	// The popup left the document and no path labelled the close, so leaving
+	// The popup left the document and no path labeled the close, so leaving
 	// the document is what closed it. An existing label wins: a dialog closed
 	// by Escape and removed afterwards was closed by Escape.
 	if ( ! element.isConnected && 'api' === state.reason ) {
@@ -221,7 +221,7 @@ function watchForRemoval( element ) {
 			if ( ! openElement.isConnected ) {
 				// Leaving the document is a close the DOM has already
 				// performed, and `flushClosed()` is what completes one — down
-				// to labelling the reason `removed`.
+				// to labeling the reason `removed`.
 				flushClosed( openElement );
 			}
 		} );
@@ -251,7 +251,7 @@ function focusQuietly( node ) {
  *
  * The container is preferred: focusing it announces the dialog role and its
  * accessible name, then leaves the visitor at the top of the content. The
- * labelled heading is the fallback. A form field is never a candidate, and
+ * labeled heading is the fallback. A form field is never a candidate, and
  * `showModal()`'s own default — the first focusable descendant, which is
  * routinely an email input — is deliberately overridden here.
  *
@@ -490,7 +490,7 @@ export function openPopup( element, options ) {
 
 	if ( isModal && openModal && openModal !== element ) {
 		// A modal the DOM has already closed is finished by this under the
-		// reason its own path recorded, rather than being relabelled as
+		// reason its own path recorded, rather than being relabeled as
 		// superseded by the popup that merely came next.
 		closePopup( openModal, 'superseded' );
 	}

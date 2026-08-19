@@ -86,7 +86,7 @@ final class Test_Popkit_Settings extends WP_UnitTestCase {
 		$this->assertArrayHasKey(
 			self::OPTION,
 			$registered,
-			'popkit_settings is not registered. Settings::init() has to run from the plugin boot sequence: register_setting() is what installs the sanitize callback, so without it update_option() stores whatever it is handed and an unrecognised truthy value would arm irreversible content deletion.'
+			'popkit_settings is not registered. Settings::init() has to run from the plugin boot sequence: register_setting() is what installs the sanitize callback, so without it update_option() stores whatever it is handed and an unrecognized truthy value would arm irreversible content deletion.'
 		);
 
 		$args = $registered[ self::OPTION ];
@@ -138,7 +138,7 @@ final class Test_Popkit_Settings extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A value the sanitizer does not recognise becomes boolean false.
+	 * A value the sanitizer does not recognize becomes boolean false.
 	 *
 	 * The opt-in is armed first on purpose. Without that step the assertion could
 	 * pass because update_option() declined to write a value identical to the
@@ -146,7 +146,7 @@ final class Test_Popkit_Settings extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	public function test_an_unrecognised_value_is_coerced_to_boolean_false() {
+	public function test_an_unrecognized_value_is_coerced_to_boolean_false() {
 		update_option( self::OPTION, array( self::SETTING => true ) );
 
 		$this->assertTrue(
@@ -164,7 +164,7 @@ final class Test_Popkit_Settings extends WP_UnitTestCase {
 		$this->assertSame(
 			false,
 			$stored[ self::SETTING ],
-			'An unrecognised value must become boolean false. A truthy string here reads as "yes" to every later check and arms the irreversible deletion of every popup on the site.'
+			'An unrecognized value must become boolean false. A truthy string here reads as "yes" to every later check and arms the irreversible deletion of every popup on the site.'
 		);
 		$this->assertSame(
 			array( self::SETTING => false ),
@@ -173,7 +173,7 @@ final class Test_Popkit_Settings extends WP_UnitTestCase {
 		);
 		$this->assertFalse(
 			Settings::delete_data_on_uninstall(),
-			'The opt-in must read false after an unrecognised value was submitted.'
+			'The opt-in must read false after an unrecognized value was submitted.'
 		);
 	}
 
@@ -186,7 +186,7 @@ final class Test_Popkit_Settings extends WP_UnitTestCase {
 	 *
 	 * Note the numeric rows. `filter_var()` accepts only `1`, `true`, `on` and
 	 * `yes` as true, so `2` is false. That is the documented fail-closed
-	 * behaviour for a setting that authorizes destruction, not an oversight.
+	 * behavior for a setting that authorizes destruction, not an oversight.
 	 *
 	 * @return void
 	 */
@@ -304,7 +304,7 @@ final class Test_Popkit_Settings extends WP_UnitTestCase {
 
 		$this->assertFalse(
 			Settings::delete_data_on_uninstall(),
-			'Settings::update() must sanitize what it is handed; an unrecognised value must not arm the uninstall opt-in.'
+			'Settings::update() must sanitize what it is handed; an unrecognized value must not arm the uninstall opt-in.'
 		);
 	}
 

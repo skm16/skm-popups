@@ -43,7 +43,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * Until Phase 4 registers the built-in server conditions and their evaluators,
  * callers pass no evaluator and every server rule is therefore indeterminate.
- * The evaluator argument deliberately has no fallback behaviour of its own:
+ * The evaluator argument deliberately has no fallback behavior of its own:
  * treating an unjudged rule as true would silently pass targeting that was never
  * checked.
  *
@@ -160,7 +160,7 @@ final class Rule_Evaluator {
 	 * Returns the rule set as it should be emitted to the client.
 	 *
 	 * Three things happen, and each of them is a documented requirement rather
-	 * than an optimisation:
+	 * than an optimization:
 	 *
 	 * - Groups that failed server-side are removed. `data-model.md` requires that
 	 *   the client never sees them, so it cannot resurrect one.

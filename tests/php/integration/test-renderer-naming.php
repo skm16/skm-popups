@@ -19,7 +19,7 @@
  * whole section's text.
  *
  * {@see Test_Popkit_Renderer_Naming::test_an_authored_anchor_names_the_popup_by_its_own_text()}
- * is the regression test. The rest of the file pins the behaviour either side of
+ * is the regression test. The rest of the file pins the behavior either side of
  * it, because the fix is only correct if the common case is untouched — a
  * heading with no anchor must still be named by `aria-labelledby`, and the
  * author's own `id` must still survive the render byte for byte.

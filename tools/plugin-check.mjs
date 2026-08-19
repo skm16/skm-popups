@@ -283,7 +283,7 @@ const others = items.length - errors - warnings;
 // Plugin Check is not active. Never fall through to a pass.
 if ( 0 === arrays && ! /(^|\n)Success:/.test( stdout ) ) {
 	fail(
-		'no findings and no success line were recognised in the Plugin Check output. Is the plugin-check plugin active in wp-env?'
+		'no findings and no success line were recognized in the Plugin Check output. Is the plugin-check plugin active in wp-env?'
 	);
 }
 

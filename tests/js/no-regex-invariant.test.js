@@ -72,11 +72,11 @@
  *
  * A stripper that silently over-consumed — an unterminated literal, a `/`
  * misread as opening a pattern — would blank the rest of the file and report
- * zero offences, which is indistinguishable from clean source. Four defences:
+ * zero offenses, which is indistinguishable from clean source. Four defenses:
  * template substitutions are scanned as code rather than blanked with the text
  * around them, a candidate literal that does not close on its own line is
  * treated as division instead, every scanned module is asserted to still contain
- * recognisable code after the strip, and the last four tests drive the scanner
+ * recognizable code after the strip, and the last four tests drive the scanner
  * with source that does compile a pattern and source that only talks about one,
  * and assert it separates the two.
  *
@@ -93,7 +93,7 @@
  * genuinely safe use ever arrives, add the mechanism then, and make it carry a
  * written justification naming the subject and saying why it cannot be author
  * input. The two divisions in the tree, `clock.js` line 76 and
- * `scroll-depth.js` line 167, are arithmetic and are not offences; a test below
+ * `scroll-depth.js` line 167, are arithmetic and are not offenses; a test below
  * pins that.
  *
  * @see docs/CLAUDE.md -> Security -> URL match language
@@ -123,8 +123,8 @@ const SCANNED_ROOT = 'src/frontend';
 /**
  * Methods that take or receive a regular expression, named in failure messages.
  *
- * Membership here changes nothing about whether an offence is reported — every
- * literal is one — only how the offence reads. `matchAll` and `replaceAll` join
+ * Membership here changes nothing about whether an offense is reported — every
+ * literal is one — only how the offense reads. `matchAll` and `replaceAll` join
  * the six the constitution names because they are the same call with a longer
  * spelling.
  *
@@ -212,7 +212,7 @@ function isSpace( char ) {
 /**
  * Overwrites a range with spaces, preserving newlines.
  *
- * Newlines survive so that offence line numbers refer to the original file, and
+ * Newlines survive so that offense line numbers refer to the original file, and
  * the blanked source stays the same length as its input so every index computed
  * from one is valid in the other.
  *
@@ -361,7 +361,7 @@ function startsRegexLiteral( out, slashAt ) {
  * A literal cannot span a line, so a candidate reaching a newline unclosed was a
  * division after all; nothing is recorded and nothing is blanked. That is the
  * safe direction for the stripper — over-consuming would blank real code and
- * hide an offence — and it costs this guard nothing, because no pattern the
+ * hide an offense — and it costs this guard nothing, because no pattern the
  * engine accepts spans a line either.
  *
  * The literal is blanked along with everything else, so that a later `/` in the
@@ -585,7 +585,7 @@ function previousSignificant( code, start ) {
 /**
  * Reports whether an exact identifier sits at an index, on identifier boundaries.
  *
- * The boundary check keeps `myRegExpCache` and `RegExpish` out of the offence
+ * The boundary check keeps `myRegExpCache` and `RegExpish` out of the offense
  * list while `window.RegExp` stays in it: `.` is not an identifier character, so
  * a qualified read is still a boundary-clean occurrence.
  *
@@ -649,8 +649,8 @@ function identifierEndingAt( code, end ) {
  *
  * Both arrangements are looked for, because both get written: the literal as
  * receiver, and the literal as the first argument of a method on a string. A
- * literal with neither neighbour — one assigned to a constant, say — is still an
- * offence; it simply has no method to name yet.
+ * literal with neither neighbor — one assigned to a constant, say — is still an
+ * offense; it simply has no method to name yet.
  *
  * @param {string} code    Blanked source.
  * @param {Object} literal `{ start, end }` range of the literal.
@@ -711,16 +711,16 @@ function lineAt( code, index ) {
  *
  * Two shapes, and they are exhaustive: a literal in code position, and the
  * `RegExp` identifier, which covers `new RegExp( value )`, the constructor
- * called without `new`, and a qualified `window.RegExp`. Offences are sorted by
+ * called without `new`, and a qualified `window.RegExp`. Offenses are sorted by
  * line so a failure reads down the file.
  *
  * @param {string} source JavaScript source.
  * @param {string} label  Path to name in the message, relative to the plugin root.
- * @return {string[]} One human-readable sentence per offence; empty when there are none.
+ * @return {string[]} One human-readable sentence per offense; empty when there are none.
  */
-function offencesInSource( source, label ) {
+function offensesInSource( source, label ) {
 	const { code, literals } = scanSource( source );
-	const offences = [];
+	const offenses = [];
 
 	for ( const literal of literals ) {
 		const method = methodBesideLiteral( code, literal );
@@ -732,7 +732,7 @@ function offencesInSource( source, label ) {
 				  method +
 				  '()';
 
-		offences.push( {
+		offenses.push( {
 			line,
 			message: '  ' + label + ':' + line + ' ' + usage,
 		} );
@@ -748,7 +748,7 @@ function offencesInSource( source, label ) {
 			? 'new RegExp()'
 			: 'RegExp()';
 
-		offences.push( {
+		offenses.push( {
 			line,
 			message:
 				'  ' +
@@ -760,9 +760,9 @@ function offencesInSource( source, label ) {
 		} );
 	}
 
-	return offences
+	return offenses
 		.sort( ( first, second ) => first.line - second.line )
-		.map( ( offence ) => offence.message );
+		.map( ( offense ) => offense.message );
 }
 
 /**
@@ -823,7 +823,7 @@ describe( 'no-regex invariant', () => {
 
 	it( 'leaves real code behind in every scanned module', () => {
 		// The fail-open this file most needs to rule out: a stripper that
-		// over-consumed reports no offences and looks exactly like clean source.
+		// over-consumed reports no offenses and looks exactly like clean source.
 		for ( const relativePath of jsFilesUnder( SCANNED_ROOT ) ) {
 			const code = stripNonCode( readModule( relativePath ) );
 
@@ -844,14 +844,14 @@ describe( 'no-regex invariant', () => {
 	} );
 
 	it( 'finds no regular expression anywhere in the frontend bundle', () => {
-		const offences = jsFilesUnder( SCANNED_ROOT ).flatMap(
+		const offenses = jsFilesUnder( SCANNED_ROOT ).flatMap(
 			( relativePath ) =>
-				offencesInSource( readModule( relativePath ), relativePath )
+				offensesInSource( readModule( relativePath ), relativePath )
 		);
 
 		// This is the invariant. Everything else in the file exists to make this
 		// assertion trustworthy.
-		expect( offences ).toEqual( [] );
+		expect( offenses ).toEqual( [] );
 	} );
 
 	it( 'does not trip on the paragraph in referrer.js that explains the ban', () => {
@@ -862,7 +862,7 @@ describe( 'no-regex invariant', () => {
 		// that started firing on prose could not be "fixed" by deleting the
 		// paragraph; the second is the guard staying quiet about it.
 		expect( source ).toContain( '`/[A-Z]/g` replacement' );
-		expect( offencesInSource( source, relativePath ) ).toEqual( [] );
+		expect( offensesInSource( source, relativePath ) ).toEqual( [] );
 	} );
 
 	it( 'detects a regular expression and names the file and the line', () => {
@@ -870,17 +870,17 @@ describe( 'no-regex invariant', () => {
 			'const subject = referrerSubject();\n' +
 			'const hit = /popkit/.test( subject );\n';
 
-		const offences = offencesInSource(
+		const offenses = offensesInSource(
 			snippet,
 			'src/frontend/conditions/referrer.js'
 		);
 
-		expect( offences ).toHaveLength( 1 );
-		expect( offences[ 0 ] ).toContain(
+		expect( offenses ).toHaveLength( 1 );
+		expect( offenses[ 0 ] ).toContain(
 			'src/frontend/conditions/referrer.js'
 		);
-		expect( offences[ 0 ] ).toContain( ':2' );
-		expect( offences[ 0 ] ).toContain( '.test()' );
+		expect( offenses[ 0 ] ).toContain( ':2' );
+		expect( offenses[ 0 ] ).toContain( '.test()' );
 	} );
 
 	it( 'detects every shape of regular expression usage', () => {
@@ -906,19 +906,19 @@ describe( 'no-regex invariant', () => {
 		for ( const spelling of spellings ) {
 			expect( {
 				spelling,
-				offences: offencesInSource( spelling, 'fixture.js' ).length,
-			} ).toEqual( { spelling, offences: 1 } );
+				offenses: offensesInSource( spelling, 'fixture.js' ).length,
+			} ).toEqual( { spelling, offenses: 1 } );
 		}
 	} );
 
 	it( 'names the method when the literal is an argument', () => {
-		const offences = offencesInSource(
+		const offenses = offensesInSource(
 			'const cleaned = value.replace( /[A-Z]/g, "" );',
 			'fixture.js'
 		);
 
-		expect( offences ).toHaveLength( 1 );
-		expect( offences[ 0 ] ).toContain( '.replace()' );
+		expect( offenses ).toHaveLength( 1 );
+		expect( offenses[ 0 ] ).toContain( '.replace()' );
 	} );
 
 	it( 'ignores prose, literals, division and names that merely contain RegExp', () => {
@@ -940,7 +940,7 @@ describe( 'no-regex invariant', () => {
 			'const folded = foldCase( value );',
 		].join( '\n' );
 
-		expect( offencesInSource( snippet, 'fixture.js' ) ).toEqual( [] );
+		expect( offensesInSource( snippet, 'fixture.js' ) ).toEqual( [] );
 	} );
 
 	it( 'does not let a division hide the code that follows it', () => {
@@ -951,6 +951,6 @@ describe( 'no-regex invariant', () => {
 			'const half = total / 2;\n' +
 			'const hit = /popkit/.test( value );\n';
 
-		expect( offencesInSource( snippet, 'fixture.js' ) ).toHaveLength( 1 );
+		expect( offensesInSource( snippet, 'fixture.js' ) ).toHaveLength( 1 );
 	} );
 } );

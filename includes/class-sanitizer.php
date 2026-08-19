@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
  * Adding a field type means adding an arm to self::sanitize_value(), never a
  * bespoke callback next to a control.
  *
- * Two behaviours here are targeting-safety decisions rather than conveniences,
+ * Two behaviors here are targeting-safety decisions rather than conveniences,
  * and both follow from `docs/CLAUDE.md` -> Registry invariants:
  *
  * - **A rule whose type is unregistered is never discarded.** Its values are
@@ -810,7 +810,7 @@ final class Sanitizer {
 		 * `Condition` requires to a schema.
 		 *
 		 * Treating that string as "unspecified" and falling through to the default
-		 * silently sanitised every declared int[] field as strings, so `post_ids`
+		 * silently sanitized every declared int[] field as strings, so `post_ids`
 		 * and `taxonomy_term` would have stored array( '12', '34' ) and the wrong
 		 * type would survive the round trip.
 		 */

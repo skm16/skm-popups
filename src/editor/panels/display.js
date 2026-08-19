@@ -1,20 +1,35 @@
 /**
  * popkit — the appearance panel.
  *
- * Layout, theme, size, position, overlay and animation.
+ * Layout, theme, size, position, overlay, animation, and the per-popup color
+ * and scale overrides.
+ *
+ * ## Nothing here names a value or a label
+ *
+ * Every option in this panel is read from `registry.vocabulary`, which is
+ * `Popkit\Vocabulary` serialized. This file used to carry its own copies —
+ * `{ value: 'banner', label: 'Inline banner' }` and so on — and they were wrong
+ * in the ordinary way copies go wrong: the classic editor, which renders the same
+ * settings from PHP, called the same stored value a "Notification bar", and the
+ * position `center` was spelled "Centered" on one screen while the rest of the
+ * plugin used US spellings.
+ *
+ * So the labels moved to PHP and travel with the registry. The order of the
+ * options travels with them — see {@link labelOptions} — so adding a theme is one
+ * edit in one file and both editors offer it.
  *
  * ## Position depends on layout
  *
- * A modal sits `center` or `top`; a banner sits `top` or `bottom`. The two
- * vocabularies overlap on `top` and differ everywhere else, so the options are
- * rebuilt when the layout changes and a position the new layout cannot express
- * is replaced with that layout's default. Leaving `center` selected on a banner
- * would store a value `Sanitizer::position_field()` rejects, and the author
- * would see their choice silently become something else on save.
+ * A modal sits `center` or `top`; a notification bar sits `top`, `bottom` or
+ * `lower_third`. The two vocabularies overlap on `top` and differ everywhere
+ * else, so the options are rebuilt when the layout changes and a position the new
+ * layout cannot express is replaced with that layout's first. Leaving `center`
+ * selected on a bar would store a value `Meta::sanitize_display()` rejects, and
+ * the author would see their choice silently become something else on save.
  *
  * ## Overlay settings are modal-only
  *
- * `overlay` is ignored for a banner, and `close_on_overlay_click` means nothing
+ * `overlay` is ignored for a bar, and `close_on_overlay_click` means nothing
  * without an overlay. Both are hidden rather than disabled where they do not
  * apply — a disabled control invites the author to work out how to enable it,
  * and here there is nothing to work out.
@@ -31,120 +46,67 @@
  * @jsxFrag Fragment
  *
  * @see src/editor/controls.js -> Why this file pins the classic JSX runtime
+ * @see includes/class-vocabulary.php
  * @see docs/data-model.md -> Display
  */
 
 import { createElement, Fragment } from '@wordpress/element';
 
-import {
-	SelectControl,
-	TextControl,
-	ToggleControl,
-} from '@wordpress/components';
+import { SelectControl, ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
+import { FieldControl } from '../controls.js';
+import { labelOptions } from '../registry.js';
+
 /**
- * Per-popup colour overrides, matching `Meta::DISPLAY_COLOR_FIELDS`.
+ * Field labels for the non-color overrides, matching `Meta::DISPLAY_SCALE_FIELDS`.
  *
- * Plain text inputs rather than `ColorPalette` or `ColorPicker`, and that is a
- * deliberate trade rather than a shortcut. Those components have no empty state
- * — they report a colour as soon as they are touched — so an author who opened
- * one and changed their mind would have silently set a colour. Blank has to stay
- * expressible, because blank is what "keep the theme" means, and the theme is
- * the value whose contrast has actually been measured.
+ * The names of the *fields* are here; the names of their *values* come from the
+ * registry. A field label describes a control this panel chose to render in this
+ * order, which is a decision belonging to this file — whereas a value label
+ * names something stored, which is not.
  *
  * @type {Array<{key: string, label: string}>}
  */
-const COLORS = [
-	{ key: 'custom_background', label: __( 'Background colour', 'popkit' ) },
-	{ key: 'custom_text', label: __( 'Text colour', 'popkit' ) },
-	{ key: 'custom_accent', label: __( 'Link colour', 'popkit' ) },
-	{ key: 'custom_border_color', label: __( 'Border colour', 'popkit' ) },
-];
-
-/**
- * Non-colour overrides, matching `Meta::DISPLAY_SCALE_FIELDS`.
- *
- * Steps on a scale rather than measurements, so nothing an author picks is ever
- * parsed as CSS and the stylesheet keeps deciding what a step looks like.
- *
- * @type {Array<{key: string, label: string, options: Array<{value: string, label: string}>}>}
- */
 const SCALES = [
-	{
-		key: 'custom_border_width',
-		label: __( 'Border width', 'popkit' ),
-		options: [
-			{ value: 'inherit', label: __( 'Theme default', 'popkit' ) },
-			{ value: 'none', label: __( 'None', 'popkit' ) },
-			{ value: 'thin', label: __( 'Thin', 'popkit' ) },
-			{ value: 'medium', label: __( 'Medium', 'popkit' ) },
-			{ value: 'thick', label: __( 'Thick', 'popkit' ) },
-		],
-	},
-	{
-		key: 'custom_radius',
-		label: __( 'Corner rounding', 'popkit' ),
-		options: [
-			{ value: 'inherit', label: __( 'Theme default', 'popkit' ) },
-			{ value: 'none', label: __( 'Square', 'popkit' ) },
-			{ value: 'small', label: __( 'Slightly rounded', 'popkit' ) },
-			{ value: 'medium', label: __( 'Rounded', 'popkit' ) },
-			{ value: 'large', label: __( 'Very rounded', 'popkit' ) },
-		],
-	},
-	{
-		key: 'custom_font',
-		label: __( 'Font', 'popkit' ),
-		options: [
-			{ value: 'inherit', label: __( 'Follow the page', 'popkit' ) },
-			{ value: 'system', label: __( 'System', 'popkit' ) },
-			{ value: 'serif', label: __( 'Serif', 'popkit' ) },
-			{ value: 'sans', label: __( 'Sans serif', 'popkit' ) },
-			{ value: 'mono', label: __( 'Monospace', 'popkit' ) },
-		],
-	},
-	{
-		key: 'custom_font_size',
-		label: __( 'Text size', 'popkit' ),
-		options: [
-			{ value: 'inherit', label: __( 'Follow the page', 'popkit' ) },
-			{ value: 'small', label: __( 'Small', 'popkit' ) },
-			{ value: 'medium', label: __( 'Medium', 'popkit' ) },
-			{ value: 'large', label: __( 'Large', 'popkit' ) },
-		],
-	},
+	{ key: 'custom_border_width', label: __( 'Border width', 'popkit' ) },
+	{ key: 'custom_radius', label: __( 'Corner rounding', 'popkit' ) },
+	{ key: 'custom_font', label: __( 'Font', 'popkit' ) },
+	{ key: 'custom_font_size', label: __( 'Text size', 'popkit' ) },
 ];
 
 /**
- * Positions each layout allows, matching `Meta::DISPLAY_POSITIONS`.
+ * Field schema for one color override.
  *
- * @type {Object<string, Array<{value: string, label: string}>>}
+ * Built per field rather than declared once, because the label differs and
+ * {@link FieldControl} reads it from the schema.
+ *
+ * @param {string} label Field label.
+ * @return {Object} Field schema.
  */
-const POSITIONS = {
-	modal: [
-		{ value: 'center', label: __( 'Centred', 'popkit' ) },
-		{ value: 'top', label: __( 'Near the top', 'popkit' ) },
-	],
-	banner: [
-		{ value: 'top', label: __( 'Top of the page', 'popkit' ) },
-		{ value: 'bottom', label: __( 'Bottom of the page', 'popkit' ) },
-		{ value: 'lower_third', label: __( 'Lower third', 'popkit' ) },
-	],
-};
+function colorSchema( label ) {
+	return {
+		type: 'string',
+		control: 'color',
+		max_length: 7,
+		label,
+	};
+}
 
 /**
  * The appearance panel body.
  *
- * @param {Object}   props          Props.
- * @param {Object}   props.display  Stored display object.
- * @param {Function} props.onChange Called with the updated display object.
+ * @param {Object}   props            Props.
+ * @param {Object}   props.display    Stored display object.
+ * @param {Function} props.onChange   Called with the updated display object.
+ * @param {Object}   props.vocabulary Label maps from the registry.
  * @return {JSX.Element} Panel body.
  */
-export function DisplayPanel( { display, onChange } ) {
+export function DisplayPanel( { display, onChange, vocabulary } ) {
 	const layout = 'banner' === display?.layout ? 'banner' : 'modal';
-	const positions = POSITIONS[ layout ];
+	const positions = labelOptions( vocabulary?.positions?.[ layout ] );
 	const isModal = 'modal' === layout;
+	const colors = vocabulary?.colors ?? {};
 
 	return (
 		<div className="popkit-display">
@@ -153,14 +115,11 @@ export function DisplayPanel( { display, onChange } ) {
 				__nextHasNoMarginBottom
 				label={ __( 'Layout', 'popkit' ) }
 				value={ layout }
-				options={ [
-					{ value: 'modal', label: __( 'Modal dialog', 'popkit' ) },
-					{ value: 'banner', label: __( 'Inline banner', 'popkit' ) },
-				] }
+				options={ labelOptions( vocabulary?.layouts ) }
 				onChange={ ( next ) => {
-					const allowed = POSITIONS[ next ].map(
-						( option ) => option.value
-					);
+					const allowed = labelOptions(
+						vocabulary?.positions?.[ next ]
+					).map( ( option ) => option.value );
 
 					onChange( {
 						...display,
@@ -177,15 +136,7 @@ export function DisplayPanel( { display, onChange } ) {
 				__nextHasNoMarginBottom
 				label={ __( 'Theme', 'popkit' ) }
 				value={ display?.theme ?? 'inherit' }
-				options={ [
-					{
-						value: 'inherit',
-						label: __( 'Inherit from the site', 'popkit' ),
-					},
-					{ value: 'light', label: __( 'Light', 'popkit' ) },
-					{ value: 'dark', label: __( 'Dark', 'popkit' ) },
-					{ value: 'bordered', label: __( 'Bordered', 'popkit' ) },
-				] }
+				options={ labelOptions( vocabulary?.themes ) }
 				onChange={ ( theme ) => onChange( { ...display, theme } ) }
 			/>
 
@@ -194,12 +145,7 @@ export function DisplayPanel( { display, onChange } ) {
 				__nextHasNoMarginBottom
 				label={ __( 'Size', 'popkit' ) }
 				value={ display?.size ?? 'medium' }
-				options={ [
-					{ value: 'small', label: __( 'Small', 'popkit' ) },
-					{ value: 'medium', label: __( 'Medium', 'popkit' ) },
-					{ value: 'large', label: __( 'Large', 'popkit' ) },
-					{ value: 'full', label: __( 'Full width', 'popkit' ) },
-				] }
+				options={ labelOptions( vocabulary?.sizes ) }
 				onChange={ ( size ) => onChange( { ...display, size } ) }
 			/>
 
@@ -207,7 +153,7 @@ export function DisplayPanel( { display, onChange } ) {
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
 				label={ __( 'Position', 'popkit' ) }
-				value={ display?.position ?? positions[ 0 ].value }
+				value={ display?.position ?? positions[ 0 ]?.value }
 				options={ positions }
 				onChange={ ( position ) =>
 					onChange( { ...display, position } )
@@ -267,26 +213,23 @@ export function DisplayPanel( { display, onChange } ) {
 					'popkit'
 				) }
 				value={ display?.animation ?? 'fade' }
-				options={ [
-					{ value: 'none', label: __( 'None', 'popkit' ) },
-					{ value: 'fade', label: __( 'Fade', 'popkit' ) },
-					{ value: 'slide', label: __( 'Slide', 'popkit' ) },
-				] }
+				options={ labelOptions( vocabulary?.animations ) }
 				onChange={ ( animation ) =>
 					onChange( { ...display, animation } )
 				}
 			/>
 
-			{ COLORS.map( ( { key, label } ) => (
-				<TextControl
-					__next40pxDefaultSize
-					__nextHasNoMarginBottom
+			<p className="popkit-panel__note">
+				{ __(
+					'Leave a color unset to keep the theme’s own.',
+					'popkit'
+				) }
+			</p>
+
+			{ Object.entries( colors ).map( ( [ key, label ] ) => (
+				<FieldControl
 					key={ key }
-					label={ label }
-					help={ __(
-						'A hex value such as #ffffff. Leave blank to keep the theme’s own colour.',
-						'popkit'
-					) }
+					schema={ colorSchema( String( label ) ) }
 					value={ display?.[ key ] ?? '' }
 					onChange={ ( value ) =>
 						onChange( { ...display, [ key ]: value } )
@@ -294,14 +237,14 @@ export function DisplayPanel( { display, onChange } ) {
 				/>
 			) ) }
 
-			{ SCALES.map( ( { key, label, options } ) => (
+			{ SCALES.map( ( { key, label } ) => (
 				<SelectControl
 					__next40pxDefaultSize
 					__nextHasNoMarginBottom
 					key={ key }
 					label={ label }
 					value={ display?.[ key ] ?? 'inherit' }
-					options={ options }
+					options={ labelOptions( vocabulary?.scales?.[ key ] ) }
 					onChange={ ( value ) =>
 						onChange( { ...display, [ key ]: value } )
 					}
@@ -310,7 +253,7 @@ export function DisplayPanel( { display, onChange } ) {
 
 			<p className="popkit-panel__note">
 				{ __(
-					'Check the contrast between your background and text colours before publishing. The shipped themes are measured against WCAG AA; a pair you choose is not.',
+					'Check the contrast between your background and text colors before publishing. The shipped themes are measured against WCAG AA; a pair you choose is not.',
 					'popkit'
 				) }
 			</p>

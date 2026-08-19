@@ -1,10 +1,10 @@
 /**
  * WCAG 2.2 contrast arithmetic.
  *
- * Used by the theme tests, which read *computed* colours out of a rendered
+ * Used by the theme tests, which read *computed* colors out of a rendered
  * popup and check them here. That direction matters: a check that read the
  * stylesheet's token declarations would be testing what the author typed, and
- * would keep passing after a cascade change made the rendered colour something
+ * would keep passing after a cascade change made the rendered color something
  * else entirely.
  *
  * Not part of the shipped bundle. Nothing in `src/` imports it.
@@ -31,18 +31,18 @@
  */
 
 /**
- * Parses a CSS colour into RGBA, with channels 0–255 and alpha 0–1.
+ * Parses a CSS color into RGBA, with channels 0–255 and alpha 0–1.
  *
  * Handles what `getComputedStyle()` actually returns — `rgb(r, g, b)`,
  * `rgba(r, g, b, a)`, and the space-separated `rgb(r g b / a)` form — plus hex,
  * so a token can be checked straight out of the stylesheet in a unit test.
  *
- * Returns null for anything else, including named colours and `color(...)`
- * spaces. Null is a refusal to guess: a caller that treated an unparsed colour
- * as black would report a passing ratio for a colour it never read.
+ * Returns null for anything else, including named colors and `color(...)`
+ * spaces. Null is a refusal to guess: a caller that treated an unparsed color
+ * as black would report a passing ratio for a color it never read.
  *
- * @param {string} value CSS colour.
- * @return {{r: number, g: number, b: number, a: number}|null} Parsed colour, or null.
+ * @param {string} value CSS color.
+ * @return {{r: number, g: number, b: number, a: number}|null} Parsed color, or null.
  */
 const parseColor = ( value ) => {
 	if ( 'string' !== typeof value ) {
@@ -115,7 +115,7 @@ const parseColor = ( value ) => {
 /**
  * Relative luminance, per WCAG 2.x.
  *
- * @param {{r: number, g: number, b: number}} color Opaque colour.
+ * @param {{r: number, g: number, b: number}} color Opaque color.
  * @return {number} Luminance, 0–1.
  */
 const luminance = ( { r, g, b } ) => {
@@ -133,11 +133,11 @@ const luminance = ( { r, g, b } ) => {
 };
 
 /**
- * Composites a possibly-transparent colour over an opaque one.
+ * Composites a possibly-transparent color over an opaque one.
  *
  * @param {{r: number, g: number, b: number, a: number}} fg Foreground.
  * @param {{r: number, g: number, b: number}}            bg Opaque background.
- * @return {{r: number, g: number, b: number}} Composited colour.
+ * @return {{r: number, g: number, b: number}} Composited color.
  */
 const composite = ( fg, bg ) => {
 	return {
@@ -150,13 +150,13 @@ const composite = ( fg, bg ) => {
 /**
  * Contrast ratio between a foreground and a background.
  *
- * Throws rather than returns a number when either colour cannot be read, or
+ * Throws rather than returns a number when either color cannot be read, or
  * when the background is itself translucent. A contrast check that silently
  * degrades to a default is worse than no check: it reports a ratio for a
  * rendering nobody verified.
  *
- * @param {string} foreground CSS colour, alpha permitted.
- * @param {string} background CSS colour, must be opaque.
+ * @param {string} foreground CSS color, alpha permitted.
+ * @param {string} background CSS color, must be opaque.
  * @return {number} Ratio between 1 and 21.
  */
 const contrastRatio = ( foreground, background ) => {
@@ -164,16 +164,16 @@ const contrastRatio = ( foreground, background ) => {
 	const bg = parseColor( background );
 
 	if ( ! fg ) {
-		throw new Error( `Unreadable foreground colour: ${ foreground }` );
+		throw new Error( `Unreadable foreground color: ${ foreground }` );
 	}
 
 	if ( ! bg ) {
-		throw new Error( `Unreadable background colour: ${ background }` );
+		throw new Error( `Unreadable background color: ${ background }` );
 	}
 
 	if ( 1 !== bg.a ) {
 		throw new Error(
-			`Background colour is translucent (${ background }); compositing it correctly needs every layer beneath it, and assuming one would report a ratio nobody verified.`
+			`Background color is translucent (${ background }); compositing it correctly needs every layer beneath it, and assuming one would report a ratio nobody verified.`
 		);
 	}
 

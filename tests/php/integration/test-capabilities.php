@@ -524,7 +524,7 @@ final class Test_Popkit_Capabilities extends WP_UnitTestCase {
 			 * trashed post — that is the check wp-admin performs for the untrash
 			 * and delete actions alike. They are listed separately because they
 			 * are separate operations in the exit criteria and would diverge if
-			 * either check were ever customised.
+			 * either check were ever customized.
 			 */
 			'restore own from trash'                       => current_user_can( 'delete_post', $own_trashed ),
 			'delete own permanently'                       => current_user_can( 'delete_post', $own_trashed ),
