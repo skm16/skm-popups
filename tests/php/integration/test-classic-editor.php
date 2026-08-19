@@ -55,6 +55,18 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		/*
+		 * Every callback in Classic_Editor asks Editor_Mode first and returns if
+		 * the block editor is in use — which is the default. So a test of the
+		 * classic surface has to put the site into the state where that surface is
+		 * the one that runs, exactly as a real site would.
+		 *
+		 * This is not test scaffolding working around the code: without it these
+		 * tests pass vacuously, asserting that nothing happened while believing
+		 * they asserted that the right thing happened.
+		 */
+		add_filter( 'popkit_use_block_editor', '__return_false' );
+
 		Capabilities::assign();
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
@@ -75,6 +87,7 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	public function tear_down() {
 		$_POST = array();
 
+		remove_filter( 'popkit_use_block_editor', '__return_false' );
 		Capabilities::remove();
 
 		parent::tear_down();
@@ -90,6 +103,10 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_popups_opt_back_into_the_block_editor() {
+		// set_up() puts the site in classic mode for the rest of this file. This
+		// one test is about the default, so it takes that back off.
+		remove_filter( 'popkit_use_block_editor', '__return_false' );
+
 		$this->assertTrue(
 			Editor_Mode::filter_post_type( false, Post_Type::POST_TYPE ),
 			'A popup is authored as blocks, so it opts back into the block editor.'
@@ -110,8 +127,7 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_site_can_decline_the_block_editor_for_popups() {
-		add_filter( 'popkit_use_block_editor', '__return_false' );
-
+		// The filter is already in place from set_up(); this asserts what it does.
 		$this->assertFalse( Editor_Mode::uses_block_editor() );
 		$this->assertFalse(
 			Editor_Mode::filter_post_type( true, Post_Type::POST_TYPE ),
@@ -134,8 +150,6 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 			$editors,
 			'Exactly one editor is offered, so no link can drop half the interface.'
 		);
-
-		remove_filter( 'popkit_use_block_editor', '__return_false' );
 	}
 
 	/**
@@ -464,6 +478,106 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 		$this->assertSame( array( 4, 8, 15 ), $coerced['ids'], 'Blank entries in a list are a typo, not an empty item.' );
 		$this->assertSame( array( 'a', 'b' ), $coerced['names'] );
 		$this->assertArrayNotHasKey( 'ignored', $coerced, 'The schema defines the shape; the form does not.' );
+	}
+
+	/**
+	 * The targeting box renders a usable form, driven by the registry.
+	 *
+	 * The registry invariant, on this screen: the condition list is not written
+	 * out anywhere in `Classic_Editor`, so a condition registered by a third party
+	 * appears here without either file knowing about the other.
+	 *
+	 * @return void
+	 */
+	public function test_the_targeting_box_renders_the_registered_conditions() {
+		$html = $this->render( 'render_targeting' );
+
+		$this->assertStringContainsString( Classic_Editor::NONCE, $html, 'Without a nonce field, no save is ever accepted.' );
+		$this->assertStringContainsString( 'value="url_path"', $html, 'Conditions come from the registry.' );
+		$this->assertStringContainsString( 'value="post_type"', $html );
+		$this->assertStringContainsString( 'data-popkit-template="rule"', $html, 'The repeater needs a template to clone.' );
+		$this->assertStringContainsString( 'data-popkit-add-group', $html );
+	}
+
+	/**
+	 * A stored rule renders with its own values, and its condition selected.
+	 *
+	 * @return void
+	 */
+	public function test_a_stored_rule_renders_its_values() {
+		update_post_meta(
+			$this->popup,
+			Meta::CONDITIONS,
+			array(
+				'groups' => array(
+					array(
+						'rules' => array(
+							array(
+								'type'   => 'url_path',
+								'negate' => false,
+								'values' => array(
+									'match' => 'contains',
+									'value' => '/offers/',
+								),
+							),
+						),
+					),
+				),
+			)
+		);
+
+		$html = $this->render( 'render_targeting' );
+
+		$this->assertStringContainsString( 'value="/offers/"', $html, 'A saved rule has to come back into its own control.' );
+		$this->assertStringContainsString( 'value="contains" selected', $html );
+	}
+
+	/**
+	 * The appearance box offers the customisation controls.
+	 *
+	 * @return void
+	 */
+	public function test_the_appearance_box_offers_customisation() {
+		$html = $this->render( 'render_appearance' );
+
+		$this->assertStringContainsString( 'popkit_display[custom_background]', $html );
+		$this->assertStringContainsString( 'popkit_display[custom_font]', $html );
+		$this->assertStringContainsString( 'value="lower_third"', $html, 'A banner can be placed in the lower third from this screen.' );
+	}
+
+	/**
+	 * Nothing renders and nothing enqueues while the block editor owns popups.
+	 *
+	 * Both surfaces attach their hooks at boot, so the guard inside each callback
+	 * is the only thing keeping them from running together.
+	 *
+	 * @return void
+	 */
+	public function test_the_classic_boxes_stand_down_for_the_block_editor() {
+		remove_filter( 'popkit_use_block_editor', '__return_false' );
+
+		$GLOBALS['wp_meta_boxes'] = array();
+
+		Classic_Editor::register_meta_boxes();
+
+		$this->assertSame(
+			array(),
+			$GLOBALS['wp_meta_boxes'],
+			'The classic boxes must not appear alongside the block editor sidebar.'
+		);
+	}
+
+	/**
+	 * Captures a meta box's output.
+	 *
+	 * @param string $method Renderer to call.
+	 * @return string Rendered markup.
+	 */
+	private function render( $method ) {
+		ob_start();
+		Classic_Editor::$method( get_post( $this->popup ) );
+
+		return (string) ob_get_clean();
 	}
 
 	/**

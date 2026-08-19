@@ -13,9 +13,15 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Renders and saves the five popup panels as classic-editor meta boxes.
  *
- * Mounted only when {@see Editor_Mode::uses_block_editor()} says no, so this and
- * {@see Editor} are never both live. Two surfaces writing the same post meta is
- * how a popup ends up with settings that depend on which screen saved last.
+ * Every callback here begins by asking {@see Editor_Mode::uses_block_editor()}
+ * and returns immediately if the answer is yes, so this and {@see Editor} are
+ * never both live. Two surfaces writing the same post meta is how a popup ends
+ * up with settings that depend on which screen saved last.
+ *
+ * The check is at callback time rather than at boot, because `Plugin::boot()`
+ * runs on `plugins_loaded` and a theme's `functions.php` is read afterwards — a
+ * site adding the `popkit_use_block_editor` filter where a site owner would most
+ * naturally add it would otherwise have had no effect, and no error.
  *
  * ## Sanitization is not reimplemented here
  *
@@ -104,6 +110,10 @@ final class Classic_Editor {
 	 * @return void
 	 */
 	public static function register_meta_boxes(): void {
+		if ( Editor_Mode::uses_block_editor() ) {
+			return;
+		}
+
 		add_meta_box(
 			'popkit-targeting',
 			__( 'PopKit — Targeting', 'popkit' ),
@@ -141,6 +151,10 @@ final class Classic_Editor {
 	 * @return void
 	 */
 	public static function enqueue_assets( $hook_suffix ): void {
+		if ( Editor_Mode::uses_block_editor() ) {
+			return;
+		}
+
 		if ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php' ), true ) ) {
 			return;
 		}
@@ -536,10 +550,6 @@ final class Classic_Editor {
 				'enum'  => Meta::DISPLAY_LAYOUTS,
 				'label' => __( 'Layout', 'popkit' ),
 			),
-			'position'  => array(
-				'enum'  => Meta::DISPLAY_POSITIONS[ $layout ],
-				'label' => __( 'Position', 'popkit' ),
-			),
 			'theme'     => array(
 				'enum'  => Meta::DISPLAY_THEMES,
 				'label' => __( 'Theme', 'popkit' ),
@@ -584,9 +594,130 @@ final class Classic_Editor {
 			);
 		}
 
+		self::render_position( $display, $layout );
+
 		echo '<p class="description">';
 		echo esc_html__( 'The close button is always rendered and cannot be turned off. An overlay click and the Escape key are additional ways to dismiss a popup, never the only ones.', 'popkit' );
 		echo '</p>';
+
+		self::render_customisation( $display );
+	}
+
+	/**
+	 * Renders the position select, which is the one control whose vocabulary
+	 * depends on another control.
+	 *
+	 * A modal is centred or near the top; a banner is at the top, at the bottom,
+	 * or a lower third. Built from the *stored* layout, this select offered banner
+	 * positions only to a popup that had already been saved as a banner — so an
+	 * author switching layout had to save, watch the options change, and save
+	 * again, with nothing on screen explaining why.
+	 *
+	 * So every position is offered, grouped by the layout it belongs to. Two
+	 * things make that safe rather than sloppy: `Meta::sanitize_display()` already
+	 * replaces a position the chosen layout cannot express with that layout's own
+	 * default, so an impossible pair cannot be stored even with JavaScript off;
+	 * and `dist/classic.js` disables the group that does not apply as soon as the
+	 * layout select changes, so the choice is not offered in the first place.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array<string, mixed> $display Stored display settings.
+	 * @param string               $layout  Stored layout.
+	 * @return void
+	 */
+	private static function render_position( array $display, string $layout ): void {
+		$labels   = array(
+			'modal'  => __( 'Modal positions', 'popkit' ),
+			'banner' => __( 'Notification bar positions', 'popkit' ),
+		);
+		$selected = isset( $display['position'] ) ? (string) $display['position'] : '';
+
+		echo '<p class="popkit-field popkit-field--select">';
+		echo '<label class="popkit-field__label" for="popkit-display-position">' . esc_html__( 'Position', 'popkit' ) . '</label>';
+		echo '<select id="popkit-display-position" name="popkit_display[position]" data-popkit-position>';
+
+		foreach ( Meta::DISPLAY_POSITIONS as $for_layout => $positions ) {
+			echo '<optgroup data-popkit-for-layout="' . esc_attr( (string) $for_layout ) . '"';
+			echo ' label="' . esc_attr( (string) ( $labels[ $for_layout ] ?? $for_layout ) ) . '"';
+			echo $for_layout === $layout ? '' : ' disabled';
+			echo '>';
+
+			foreach ( $positions as $position ) {
+				echo '<option value="' . esc_attr( (string) $position ) . '"';
+				echo selected( $selected, (string) $position, false );
+				echo '>' . esc_html( (string) $position ) . '</option>';
+			}
+
+			echo '</optgroup>';
+		}
+
+		echo '</select>';
+		echo '</p>';
+	}
+
+	/**
+	 * Renders the per-popup appearance overrides.
+	 *
+	 * Colours are text inputs holding a hex value, and blank means "keep the
+	 * theme". A native colour input was the obvious choice and is the wrong one:
+	 * it has no empty state — it reports `#000000` when nothing has been picked —
+	 * so an author who opened the control and changed their mind would have
+	 * silently set the popup's text to black.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array<string, mixed> $display Stored display settings.
+	 * @return void
+	 */
+	private static function render_customisation( array $display ): void {
+		$labels = array(
+			'custom_background'   => __( 'Background colour', 'popkit' ),
+			'custom_text'         => __( 'Text colour', 'popkit' ),
+			'custom_accent'       => __( 'Link colour', 'popkit' ),
+			'custom_border_color' => __( 'Border colour', 'popkit' ),
+		);
+
+		echo '<h4>' . esc_html__( 'Customise this popup', 'popkit' ) . '</h4>';
+		echo '<p class="description">';
+		echo esc_html__( 'Leave a colour blank to keep the theme’s own. Check the contrast between your background and text colours before publishing — the shipped themes are measured, a custom pair is not.', 'popkit' );
+		echo '</p>';
+
+		foreach ( $labels as $field => $label ) {
+			Classic_Fields::render(
+				'popkit_display[' . $field . ']',
+				'popkit-display-' . str_replace( '_', '-', $field ),
+				array(
+					'type'       => 'string',
+					'control'    => 'text',
+					'max_length' => 7,
+					/* translators: %s: name of the colour being set, e.g. "Background colour". */
+					'label'      => sprintf( __( '%s — hex value such as #ffffff, or blank for the theme', 'popkit' ), $label ),
+				),
+				$display[ $field ] ?? ''
+			);
+		}
+
+		$scales = array(
+			'custom_border_width' => __( 'Border width', 'popkit' ),
+			'custom_radius'       => __( 'Corner rounding', 'popkit' ),
+			'custom_font'         => __( 'Font', 'popkit' ),
+			'custom_font_size'    => __( 'Text size', 'popkit' ),
+		);
+
+		foreach ( $scales as $field => $label ) {
+			Classic_Fields::render(
+				'popkit_display[' . $field . ']',
+				'popkit-display-' . str_replace( '_', '-', $field ),
+				array(
+					'type'    => 'enum',
+					'enum'    => Meta::DISPLAY_SCALE_FIELDS[ $field ],
+					'control' => 'select',
+					'label'   => $label,
+				),
+				$display[ $field ] ?? 'inherit'
+			);
+		}
 	}
 
 	/**
@@ -599,6 +730,10 @@ final class Classic_Editor {
 	 * @return void
 	 */
 	public static function save( $post_id, $post ): void {
+		if ( Editor_Mode::uses_block_editor() ) {
+			return;
+		}
+
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}
@@ -852,6 +987,23 @@ final class Classic_Editor {
 
 		foreach ( array( 'overlay', 'close_on_overlay_click' ) as $field ) {
 			$display[ $field ] = ! empty( $raw[ $field ] );
+		}
+
+		/*
+		 * Colours are passed through as submitted, blank included. Blank is the
+		 * author clearing an override and must reach the sanitizer as an empty
+		 * string rather than being skipped — skipping it would fall back to the
+		 * default, which for these fields is also empty, but only by coincidence.
+		 * `Meta::sanitize_color()` is what decides whether the value is a colour.
+		 */
+		foreach ( Meta::DISPLAY_COLOR_FIELDS as $field ) {
+			$display[ $field ] = isset( $raw[ $field ] ) ? (string) $raw[ $field ] : '';
+		}
+
+		foreach ( array_keys( Meta::DISPLAY_SCALE_FIELDS ) as $field ) {
+			if ( isset( $raw[ $field ] ) && '' !== $raw[ $field ] ) {
+				$display[ $field ] = (string) $raw[ $field ];
+			}
 		}
 
 		return $display;

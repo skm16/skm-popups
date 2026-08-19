@@ -78,6 +78,14 @@
 	--popkit-border: CanvasText;
 	--popkit-border-width: 0;
 	--popkit-focus: CanvasText;
+
+	/*
+	 * Links and buttons inside the content. `currentColor` rather than a colour
+	 * of its own, so the shipped themes need say nothing about it and an unset
+	 * accent is exactly the body text colour — which is what the contrast
+	 * measurements in themes.css were taken against.
+	 */
+	--popkit-accent: currentColor;
 	--popkit-focus-width: 2px;
 	--popkit-focus-offset: 2px;
 	--popkit-overlay: rgb(0 0 0 / 50%);
@@ -211,6 +219,28 @@ dialog.popkit-popup--no-overlay::backdrop {
 }
 
 /*
+ * Lower third: the broadcast band, anchored so its *top* edge sits two thirds
+ * of the way down the viewport.
+ *
+ * Anchored from the top rather than given `inset-block-end: 33.3333%`, because
+ * a bottom anchor makes the band grow upward as its content wraps — on a narrow
+ * screen a two-line banner would climb into the middle of the page and stop
+ * being a lower third at all. Anchored from the top it stays where it was put
+ * and grows downward, which is why the `max-block-size` below is a third of the
+ * viewport rather than the whole of it: the band cannot run off the bottom and
+ * take the close button with it.
+ *
+ * That cap overrides the `max-height: 100%` on `.popkit-popup--banner`, and the
+ * ordering matters — this rule follows it, and both carry the same specificity
+ * plus an attribute selector, so it wins by source order.
+ */
+.popkit-popup--banner[data-popkit-position="lower_third"] {
+	inset-block-start: 66.6667%;
+	inset-block-end: auto;
+	max-block-size: 33.3333%;
+}
+
+/*
  * `padding-inline-end` reserves the close button's whole column, so content can
  * never run underneath it however long the first line is. It is the button's
  * hit area rather than its icon, because the hit area is the part that has to
@@ -234,6 +264,16 @@ dialog.popkit-popup--no-overlay::backdrop {
 	border-radius: var(--popkit-radius);
 	background: var(--popkit-surface);
 	color: var(--popkit-on-surface);
+
+	/*
+	 * Typography lands on the container rather than on the root, because the root
+	 * of a modal is the `<dialog>` whose `::backdrop` would otherwise inherit a
+	 * font it has no text to set. Both tokens fall back to `inherit`, so a popup
+	 * with no override keeps taking its typography from the page exactly as
+	 * before — see "Per-popup appearance overrides" at the end of this file.
+	 */
+	font-family: var(--popkit-font-family, inherit);
+	font-size: var(--popkit-font-size, inherit);
 	transition:
 		opacity var(--popkit-duration) var(--popkit-easing),
 		transform var(--popkit-duration) var(--popkit-easing);
@@ -313,7 +353,7 @@ dialog.popkit-popup--no-overlay::backdrop {
 }
 
 .popkit-popup__content a:not(.has-text-color, .wp-element-button) {
-	color: inherit;
+	color: var(--popkit-accent);
 	text-decoration: underline;
 }
 
@@ -413,3 +453,95 @@ dialog.popkit-popup--no-overlay::backdrop {
 		animation: none;
 	}
 }
+
+/*
+ * Per-popup appearance overrides.
+ *
+ * The renderer writes a `data-popkit-*` attribute for each scale an author moved
+ * off `inherit`, and writes nothing at all for the ones they did not touch — so
+ * a popup with no customisation matches none of these rules and is byte-for-byte
+ * what it was before this feature existed.
+ *
+ * Scales, not measurements. A popup stores `thick`; what `thick` is, is decided
+ * here. That keeps the design values in the stylesheet with the rest of the
+ * design, and means a later release can retune a step without migrating stored
+ * popups — and, more importantly, that nothing an author types is ever parsed as
+ * CSS. Colours are the exception and cannot be a scale, which is exactly why
+ * `Meta::sanitize_color()` reduces them to a hex triplet before they get here.
+ *
+ * These set tokens rather than properties. A token is read by the rules that
+ * already style the container, so an override reaches the border, the padding
+ * and the close button through the same declarations a theme does, instead of
+ * needing a parallel set of rules that would drift.
+ */
+.popkit-popup[data-popkit-border-width="none"] {
+	--popkit-border-width: 0;
+}
+
+.popkit-popup[data-popkit-border-width="thin"] {
+	--popkit-border-width: 1px;
+}
+
+.popkit-popup[data-popkit-border-width="medium"] {
+	--popkit-border-width: 2px;
+}
+
+.popkit-popup[data-popkit-border-width="thick"] {
+	--popkit-border-width: 4px;
+}
+
+.popkit-popup[data-popkit-radius="none"] {
+	--popkit-radius: 0;
+}
+
+.popkit-popup[data-popkit-radius="small"] {
+	--popkit-radius: 4px;
+}
+
+.popkit-popup[data-popkit-radius="medium"] {
+	--popkit-radius: 10px;
+}
+
+.popkit-popup[data-popkit-radius="large"] {
+	--popkit-radius: 20px;
+}
+
+/*
+ * Font stacks name families the operating system already has. PopKit makes no
+ * external request of any kind — readme.txt states it as a promise — so a
+ * webfont is not something this control can ever offer, and a stack that ends in
+ * a generic family cannot fail to resolve.
+ */
+.popkit-popup[data-popkit-font="system"] {
+	--popkit-font-family: system-ui, -apple-system, "Segoe UI", roboto, sans-serif;
+}
+
+.popkit-popup[data-popkit-font="serif"] {
+	--popkit-font-family: georgia, cambria, "Times New Roman", times, serif;
+}
+
+.popkit-popup[data-popkit-font="sans"] {
+	--popkit-font-family: helvetica, arial, sans-serif;
+}
+
+.popkit-popup[data-popkit-font="mono"] {
+	--popkit-font-family: ui-monospace, "Cascadia Mono", menlo, consolas, monospace;
+}
+
+/*
+ * `rem`, so the steps scale with the visitor's own base font size. A step in
+ * `px` would override a reader who has enlarged their default, which is the
+ * accessibility failure this control could most easily introduce.
+ */
+.popkit-popup[data-popkit-font-size="small"] {
+	--popkit-font-size: 0.875rem;
+}
+
+.popkit-popup[data-popkit-font-size="medium"] {
+	--popkit-font-size: 1rem;
+}
+
+.popkit-popup[data-popkit-font-size="large"] {
+	--popkit-font-size: 1.125rem;
+}
+

@@ -27,8 +27,6 @@
  *
  * Row indices only have to be unique, not contiguous: `Classic_Editor` rebuilds
  * both lists with `[]` on save, so gaps left by a removal close themselves.
- *
- * @package Popkit
  */
 
 /** Tokens the server writes where a row index belongs. */
@@ -55,13 +53,20 @@ function rewriteAttributes( element, group, rule ) {
 	Array.from( element.attributes ).forEach( ( attribute ) => {
 		const { value } = attribute;
 
-		if ( ! value.includes( GROUP_TOKEN ) && ! value.includes( RULE_TOKEN ) ) {
+		if (
+			! value.includes( GROUP_TOKEN ) &&
+			! value.includes( RULE_TOKEN )
+		) {
 			return;
 		}
 
 		element.setAttribute(
 			attribute.name,
-			value.split( GROUP_TOKEN ).join( group ).split( RULE_TOKEN ).join( rule )
+			value
+				.split( GROUP_TOKEN )
+				.join( group )
+				.split( RULE_TOKEN )
+				.join( rule )
 		);
 	} );
 }
@@ -122,6 +127,55 @@ function syncRuleFields( rule ) {
 	rule.querySelectorAll( '[data-popkit-values]' ).forEach( ( group ) => {
 		group.hidden = group.dataset.popkitValues !== select.value;
 	} );
+}
+
+/**
+ * Offers only the positions the chosen layout can express.
+ *
+ * A modal is centred or near the top; a notification bar is at the top, at the
+ * bottom, or a lower third. The server renders both groups and disables the one
+ * that does not apply, so this only has to keep that in step as the layout
+ * changes.
+ *
+ * `disabled` on the `<optgroup>` rather than hiding it: a disabled option is
+ * still announced as unavailable rather than vanishing from under a screen
+ * reader user mid-interaction, and it cannot be selected by keyboard.
+ *
+ * When the current selection belongs to the group being disabled, the first
+ * option of the newly enabled group is selected instead — matching what
+ * `Meta::sanitize_display()` would have stored anyway, so the control never
+ * shows a value the save would silently change.
+ *
+ * @param {Document} doc    Owning document.
+ * @param {string}   layout Chosen layout.
+ * @return {void}
+ */
+function syncPositions( doc, layout ) {
+	const select = doc.querySelector( '[data-popkit-position]' );
+
+	if ( ! select ) {
+		return;
+	}
+
+	let fallback = null;
+
+	select
+		.querySelectorAll( '[data-popkit-for-layout]' )
+		.forEach( ( group ) => {
+			const applies = group.dataset.popkitForLayout === layout;
+
+			group.disabled = ! applies;
+
+			if ( applies && ! fallback ) {
+				fallback = group.querySelector( 'option' );
+			}
+		} );
+
+	const chosen = select.selectedOptions[ 0 ];
+
+	if ( fallback && chosen && chosen.parentElement.disabled ) {
+		fallback.selected = true;
+	}
 }
 
 /**
@@ -201,7 +255,7 @@ function addRule( button ) {
  * Focus is destroyed along with the button that held it, so leaving it to fall
  * back to `<body>` would drop a keyboard user at the top of the document.
  *
- * @param {Element} row      Row to remove.
+ * @param {Element}      row      Row to remove.
  * @param {Element|null} fallback Element to focus afterwards.
  * @return {void}
  */
@@ -225,7 +279,10 @@ function removeRow( row, fallback ) {
 function onClick( event ) {
 	const target = event.target;
 
-	if ( ! ( target instanceof Element ) ) {
+	// Duck-typed rather than `target instanceof Element`, for the reason given in
+	// src/frontend/events.js: `Element` is not among the globals this project's
+	// ESLint configuration declares, and the capability is what matters anyway.
+	if ( ! target || 'function' !== typeof target.closest ) {
 		return;
 	}
 
@@ -250,7 +307,10 @@ function onClick( event ) {
 		const group = row && row.closest( '[data-popkit-group]' );
 
 		if ( row ) {
-			removeRow( row, group && group.querySelector( '[data-popkit-add-rule]' ) );
+			removeRow(
+				row,
+				group && group.querySelector( '[data-popkit-add-rule]' )
+			);
 		}
 
 		return;
@@ -279,12 +339,22 @@ function onClick( event ) {
 function onChange( event ) {
 	const target = event.target;
 
-	if ( target instanceof Element && target.matches( '[data-popkit-rule-type]' ) ) {
+	if ( ! target || 'function' !== typeof target.matches ) {
+		return;
+	}
+
+	if ( target.matches( '[data-popkit-rule-type]' ) ) {
 		const rule = target.closest( '[data-popkit-rule]' );
 
 		if ( rule ) {
 			syncRuleFields( rule );
 		}
+
+		return;
+	}
+
+	if ( target.matches( '[name="popkit_display[layout]"]' ) ) {
+		syncPositions( target.ownerDocument, target.value );
 	}
 }
 

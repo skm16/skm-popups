@@ -205,7 +205,7 @@ final class Meta {
 	 */
 	public const DISPLAY_POSITIONS = array(
 		'modal'  => array( 'center', 'top' ),
-		'banner' => array( 'top', 'bottom' ),
+		'banner' => array( 'top', 'bottom', 'lower_third' ),
 	);
 
 	/**
@@ -218,6 +218,55 @@ final class Meta {
 	 * @var string[]
 	 */
 	public const DISPLAY_ANIMATIONS = array( 'none', 'fade', 'slide' );
+
+	/**
+	 * Colour fields an author may override on a per-popup basis.
+	 *
+	 * Each holds a hex colour or an empty string, and empty means "whatever the
+	 * chosen theme says". That is the only representation of *unset* here, which
+	 * is why these are strings rather than a nested object with its own presence
+	 * flag: an empty string cannot be confused with black, and the sanitizer can
+	 * reject anything that is neither.
+	 *
+	 * They are validated with `sanitize_hex_color()` and nothing else. These
+	 * values are printed into a `style` attribute, so accepting the full CSS
+	 * colour grammar would mean accepting a string that can close a declaration
+	 * and open another one. A hex triplet cannot.
+	 *
+	 * @since 0.1.0
+	 * @var string[]
+	 */
+	public const DISPLAY_COLOR_FIELDS = array(
+		'custom_background',
+		'custom_text',
+		'custom_accent',
+		'custom_border_color',
+	);
+
+	/**
+	 * Permitted values for the non-colour appearance overrides.
+	 *
+	 * Scales rather than numbers, and that is deliberate in two ways.
+	 *
+	 * A scale cannot carry a CSS injection: `thick` is a token this plugin
+	 * defines, where `4px` is a string that has to be parsed and trusted. And a
+	 * scale keeps the design values in the stylesheet where the rest of the
+	 * design lives — PHP stores which step was chosen, CSS decides what the step
+	 * means, so a future change to what `large` looks like does not have to
+	 * rewrite anybody's stored popups.
+	 *
+	 * `inherit` is first in each list and is the default: an author who has not
+	 * touched these gets exactly the shipped theme, unchanged.
+	 *
+	 * @since 0.1.0
+	 * @var array<string, string[]>
+	 */
+	public const DISPLAY_SCALE_FIELDS = array(
+		'custom_border_width' => array( 'inherit', 'none', 'thin', 'medium', 'thick' ),
+		'custom_radius'       => array( 'inherit', 'none', 'small', 'medium', 'large' ),
+		'custom_font'         => array( 'inherit', 'system', 'serif', 'sans', 'mono' ),
+		'custom_font_size'    => array( 'inherit', 'small', 'medium', 'large' ),
+	);
 
 	/**
 	 * Smallest permitted value of `frequency.days`.
@@ -727,7 +776,7 @@ final class Meta {
 	 * @return array<string, mixed> Default display object.
 	 */
 	public static function default_display(): array {
-		return array(
+		$defaults = array(
 			'layout'                 => 'modal',
 			'theme'                  => 'inherit',
 			'size'                   => 'medium',
@@ -736,6 +785,18 @@ final class Meta {
 			'close_on_overlay_click' => true,
 			'animation'              => 'fade',
 		);
+
+		// Every override defaults to "leave the theme alone", so a popup created
+		// before customisation existed and a popup created after it look identical.
+		foreach ( self::DISPLAY_COLOR_FIELDS as $field ) {
+			$defaults[ $field ] = '';
+		}
+
+		foreach ( array_keys( self::DISPLAY_SCALE_FIELDS ) as $field ) {
+			$defaults[ $field ] = 'inherit';
+		}
+
+		return $defaults;
 	}
 
 	/**
@@ -989,10 +1050,30 @@ final class Meta {
 	 * @return array<string, mixed> JSON Schema for `_popkit_display`.
 	 */
 	public static function display_schema(): array {
+		$properties = array();
+
+		foreach ( self::DISPLAY_COLOR_FIELDS as $field ) {
+			$properties[ $field ] = array(
+				'type'        => 'string',
+				'description' => __( 'Hex colour overriding the chosen theme, or an empty string to keep it.', 'popkit' ),
+				'default'     => '',
+				'maxLength'   => 7,
+			);
+		}
+
+		foreach ( self::DISPLAY_SCALE_FIELDS as $field => $scale ) {
+			$properties[ $field ] = array(
+				'type'        => 'string',
+				'description' => __( 'Appearance override, or inherit to keep what the chosen theme says.', 'popkit' ),
+				'enum'        => $scale,
+				'default'     => 'inherit',
+			);
+		}
+
 		return array(
 			'type'        => 'object',
 			'description' => __( 'How this popup looks when it opens.', 'popkit' ),
-			'properties'  => array(
+			'properties'  => $properties + array(
 				'layout'                 => array(
 					'type'        => 'string',
 					'description' => __( 'Modal dialog or inline banner.', 'popkit' ),
@@ -1167,7 +1248,7 @@ final class Meta {
 		$overlay = self::field_value( $values, 'overlay', $fields['overlay'] );
 		$close   = self::field_value( $values, 'close_on_overlay_click', $fields['close_on_overlay_click'] );
 
-		return array(
+		$display = array(
 			'layout'                 => $layout,
 			'theme'                  => self::field_value( $values, 'theme', $fields['theme'] ),
 			'size'                   => self::field_value( $values, 'size', $fields['size'] ),
@@ -1176,6 +1257,22 @@ final class Meta {
 			'close_on_overlay_click' => $overlay && $close,
 			'animation'              => self::field_value( $values, 'animation', $fields['animation'] ),
 		);
+
+		/*
+		 * The colour overrides go through sanitize_color() rather than through
+		 * field_value(), because a `string` field's sanitizer only bounds length
+		 * and strips tags — neither of which stops `#fff;position:fixed` from
+		 * reaching a style attribute intact.
+		 */
+		foreach ( self::DISPLAY_COLOR_FIELDS as $field ) {
+			$display[ $field ] = self::sanitize_color( $values[ $field ] ?? '' );
+		}
+
+		foreach ( array_keys( self::DISPLAY_SCALE_FIELDS ) as $field ) {
+			$display[ $field ] = self::field_value( $values, $field, $fields[ $field ] );
+		}
+
+		return $display;
 	}
 
 	/**
@@ -1272,7 +1369,7 @@ final class Meta {
 	 * @return array<string, array<string, mixed>> Field name => field schema.
 	 */
 	private static function display_fields(): array {
-		return array(
+		$fields = array(
 			'layout'                 => array(
 				'type'    => 'enum',
 				'enum'    => self::DISPLAY_LAYOUTS,
@@ -1303,6 +1400,50 @@ final class Meta {
 				'default' => 'fade',
 			),
 		);
+
+		foreach ( self::DISPLAY_COLOR_FIELDS as $field ) {
+			$fields[ $field ] = array(
+				'type'       => 'string',
+				'default'    => '',
+				'max_length' => 7,
+			);
+		}
+
+		foreach ( self::DISPLAY_SCALE_FIELDS as $field => $scale ) {
+			$fields[ $field ] = array(
+				'type'    => 'enum',
+				'enum'    => $scale,
+				'default' => 'inherit',
+			);
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Reduces a submitted colour to a hex triplet, or to nothing.
+	 *
+	 * `sanitize_hex_color()` returns null for anything that is not `#rgb` or
+	 * `#rrggbb`, and null becomes an empty string here — which the renderer reads
+	 * as "use the theme". A rejected colour therefore falls back to a value that
+	 * is known to meet the contrast the shipped themes were measured for, rather
+	 * than to a partially-parsed string.
+	 *
+	 * This is the whole of the defence for these four fields. They are printed
+	 * into a `style` attribute, so a value that could contain `;` or `)` could
+	 * close the declaration it sits in and start another one.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param mixed $raw Submitted colour.
+	 * @return string Hex colour, or an empty string.
+	 */
+	private static function sanitize_color( mixed $raw ): string {
+		if ( ! is_string( $raw ) || '' === trim( $raw ) ) {
+			return '';
+		}
+
+		return (string) sanitize_hex_color( trim( $raw ) );
 	}
 
 	/**

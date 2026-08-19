@@ -26,7 +26,7 @@
  * Plugin Name:       PopKit
  * Plugin URI:        https://github.com/skm16/skm-popups
  * Description:       Accessible, lightweight popups. Native dialogs, full keyboard and screen reader support, cache-safe targeting, and no jQuery.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Sean Roberts
@@ -39,7 +39,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'POPKIT_VERSION', '0.1.0' );
+define( 'POPKIT_VERSION', '0.2.0' );
 define( 'POPKIT_FILE', __FILE__ );
 define( 'POPKIT_DIR', plugin_dir_path( __FILE__ ) );
 define( 'POPKIT_URL', plugin_dir_url( __FILE__ ) );

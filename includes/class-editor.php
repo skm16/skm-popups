@@ -185,6 +185,13 @@ final class Editor {
 	 * @return void
 	 */
 	public static function enqueue_assets(): void {
+		// The classic surface owns this screen when a site has declined the block
+		// editor for popups. Asked here rather than at boot so a filter added from a
+		// theme — after `plugins_loaded` — still decides. See Editor_Mode.
+		if ( ! Editor_Mode::uses_block_editor() ) {
+			return;
+		}
+
 		if ( ! self::is_popup_editor_screen() ) {
 			return;
 		}

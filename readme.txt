@@ -4,7 +4,7 @@ Tags: popup, modal, accessibility, banner, newsletter
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,7 +61,7 @@ server-rendered timestamp, no login flag, no user ID.
 = Lean =
 
 * `dist/frontend.js` — 6.25 KB gzipped, against an enforced 8 KB budget
-* `dist/frontend.css` — 1.29 KB gzipped, against an enforced 4 KB budget
+* `dist/frontend.css` — 1.63 KB gzipped, against an enforced 4 KB budget
 
 Those are build-time assertions, not aspirations: `npm run size` fails the build
 if either is exceeded. No jQuery, no framework, no external requests.
@@ -84,6 +84,27 @@ rather than accepting a regular expression. Neither PCRE nor a JavaScript engine
 offers a dependable per-match time bound, so a plugin that compiled an author's
 pattern could not honestly promise that matching a URL terminates.
 
+= Layouts and appearance =
+
+Two layouts. A **modal** is a native dialog, centred or near the top. A
+**notification bar** is a fixed strip that leaves the page behind it usable, and
+it can sit at the top of the window, at the bottom, or as a **lower third** —
+the broadcast-style band two thirds of the way down.
+
+Four themes ship — light, dark, bordered, and inherit, which follows the active
+site theme's own palette. Any of them can be adjusted per popup: background,
+text, link and border colours, plus border width, corner rounding, font and text
+size.
+
+Colours are hex values and everything else is a named step rather than a
+measurement — *thin*, *rounded*, *large*. That is deliberate. Nothing you choose
+is ever handed to the browser as CSS to be parsed, and what a step looks like
+stays in the stylesheet, so a future release can retune it without rewriting
+popups you have already published.
+
+The shipped themes are measured against WCAG AA contrast. A colour pair you
+choose yourself is not, so check it before publishing.
+
 = Triggers =
 
 Page load with an optional delay, scroll depth, clicking a CSS selector, and
@@ -105,6 +126,13 @@ values so reactivating restores the popup exactly.
 2. Activate it through the **Plugins** screen.
 3. Go to **Popups > Add Popup**, write the content as blocks, and configure
    targeting, triggers, schedule, frequency and appearance in the sidebar.
+
+**Running Classic Editor?** Popups still open in the block editor, because a
+popup's content *is* blocks — your posts and pages are left exactly as you have
+configured them. If you would rather author popups in the classic screen too,
+add this and PopKit renders the same panels as meta boxes instead:
+
+`add_filter( 'popkit_use_block_editor', '__return_false' );`
 
 Requires WordPress 6.5 and PHP 8.1. Both are checked on activation, and the
 plugin refuses to load with an explanatory notice rather than a fatal error if
@@ -167,6 +195,18 @@ were being used for, and match in linear time.
 
 No. If no popup survives targeting, PopKit contributes nothing to the response:
 no script tag, no stylesheet, no inline configuration, no markup.
+
+= Does it work with Classic Editor? =
+
+Yes. Popups open in the block editor even when Classic Editor is replacing it
+site-wide, because a popup's content is blocks and authoring blocks in a
+textarea is not authoring blocks. Nothing else on your site changes: posts and
+pages keep whichever editor you chose.
+
+If you want popups in the classic screen as well, add
+`add_filter( 'popkit_use_block_editor', '__return_false' );` and the same five
+panels render as meta boxes. Exactly one of the two interfaces is ever active,
+so a popup's settings can never depend on which screen saved it last.
 
 = Is there a limit to how many popups I can have? =
 
@@ -317,10 +357,32 @@ and the block editor's own checks cover the content.
 
 == Changelog ==
 
+= 0.2.0 =
+* Popups now open in the block editor even when Classic Editor is active
+  site-wide. Previously the popup screen showed a content field and none of the
+  settings, with nothing to say why.
+* Added a classic-editor interface, for sites that would rather author popups
+  there. Enable it with `add_filter( 'popkit_use_block_editor', '__return_false' );`.
+* Added per-popup appearance overrides: background, text, link and border
+  colours, plus border width, corner rounding, font and text size.
+* Added a **lower third** position for the notification bar layout.
+* Added **Popups > Settings**, holding the opt-in for deleting PopKit's data
+  when the plugin is deleted. The setting existed but had no interface.
+* A popup heading carrying your own HTML Anchor is now announced by its own
+  text. Previously the popup borrowed the accessible name of any element on the
+  page that happened to share that anchor.
+* The 100-popup limit on a single pageview is now stated in the admin and in
+  this readme, instead of silently dropping the most recently published popups.
+
 = 0.1.0 =
 * Initial release.
 
 == Upgrade Notice ==
+
+= 0.2.0 =
+Fixes a blank settings screen on sites running Classic Editor, and corrects a
+popup that could take its announced name from unrelated page content. Adds
+appearance customisation and a lower-third notification bar.
 
 = 0.1.0 =
 Initial release.

@@ -452,10 +452,34 @@ than intended.
 | `layout` | `modal` \| `banner` |
 | `theme` | `inherit` \| `light` \| `dark` \| `bordered` |
 | `size` | `small` \| `medium` \| `large` \| `full` |
-| `position` | modal: `center` \| `top`; banner: `top` \| `bottom` |
+| `position` | modal: `center` \| `top`; banner: `top` \| `bottom` \| `lower_third` |
 | `overlay` | boolean — modal only, ignored for banner |
 | `close_on_overlay_click` | boolean — modal only, requires `overlay: true` |
 | `animation` | `none` \| `fade` \| `slide` — all become `none` under `prefers-reduced-motion` |
+| `custom_background` `custom_text` `custom_accent` `custom_border_color` | hex colour, or `""` to keep the theme's own |
+| `custom_border_width` | `inherit` \| `none` \| `thin` \| `medium` \| `thick` |
+| `custom_radius` | `inherit` \| `none` \| `small` \| `medium` \| `large` |
+| `custom_font` | `inherit` \| `system` \| `serif` \| `sans` \| `mono` |
+| `custom_font_size` | `inherit` \| `small` \| `medium` \| `large` |
+
+### Customisation is scales, plus four colours
+
+Everything an author can adjust except colour is a **step on a scale**, not a
+measurement. `thick` is a token PopKit defines; `4px` would be a string the
+browser has to parse. That distinction is the security boundary: a stored scale
+value cannot carry CSS, so the only values that ever need validating are the four
+colours — and `Meta::sanitize_color()` reduces those to `#rgb` or `#rrggbb` and
+refuses everything else, because they are printed into a `style` attribute where
+`esc_attr()` escapes the quote but not the semicolon.
+
+It is also why what a step *looks like* lives in `frontend.css` rather than in
+stored meta: a later release can retune `large` without migrating popups.
+
+The scales reach the page as `data-popkit-*` attributes and the colours as
+custom properties feeding the same tokens the shipped themes set, so one
+declaration in the stylesheet serves both. `inherit` and `""` emit **nothing at
+all**, which is what makes a popup authored before customisation existed render
+byte-for-byte as it did.
 
 **There is no `close_button` field.** Every popup renders a visible close button
 in every layout and theme; it is not configurable. The previous rule — permitting

@@ -353,16 +353,19 @@ final class Plugin {
 		Editor_Mode::init();
 
 		/*
-		 * Exactly one authoring surface mounts. Both write the same post meta, so
-		 * running them together would mean a popup's settings depended on which
-		 * screen was saved last.
+		 * Both surfaces attach their hooks; each callback asks
+		 * Editor_Mode::uses_block_editor() when it runs and returns immediately if
+		 * it is not the chosen one. Exactly one ever does anything.
+		 *
+		 * Branching *here* was the obvious shape and is wrong. This runs on
+		 * `plugins_loaded`, and a theme's `functions.php` is read afterwards — so a
+		 * site adding the `popkit_use_block_editor` filter the way a site owner
+		 * most naturally would have had no effect at all, silently. Deciding at
+		 * callback time means the filter works wherever it is added, and the hook
+		 * table stops depending on how early the answer happened to be known.
 		 */
-		if ( Editor_Mode::uses_block_editor() ) {
-			Editor::init();
-		} else {
-			Classic_Editor::init();
-		}
-
+		Editor::init();
+		Classic_Editor::init();
 		Settings_Page::init();
 	}
 }

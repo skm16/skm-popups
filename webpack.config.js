@@ -37,14 +37,19 @@ module.exports = {
 		...defaultConfig.output,
 		path: path.resolve( __dirname, 'dist' ),
 
-		// `dist/` is shared with the esbuild frontend build, and `npm run build`
-		// runs the frontend first. wp-scripts' default `output.clean` would wipe
-		// `dist/frontend.js` and `dist/frontend.css` on every editor build,
-		// breaking `npm run size` in a way that only reproduces when the two
-		// builds run in sequence. Stale editor output is still cleaned; the
+		// `dist/` is shared with the esbuild build, and `npm run build` runs esbuild
+		// first. wp-scripts' default `output.clean` would wipe its output on every
+		// editor build, breaking `npm run size` in a way that only reproduces when
+		// the two builds run in sequence. Stale editor output is still cleaned; the
 		// esbuild artifacts are preserved by name.
+		//
+		// **Every esbuild entry point must be named here.** Adding one to
+		// `esbuild.config.mjs` and forgetting this line produces a build that is
+		// correct when run alone and silently missing a file when run in sequence —
+		// which is exactly what happened to `classic.*`, and is why
+		// `tools/build-zip.mjs` refuses to package a tree missing a REQUIRED file.
 		clean: {
-			keep: /^(fonts\/|images\/|frontend\.)/,
+			keep: /^(fonts\/|images\/|frontend\.|classic\.)/,
 		},
 	},
 };

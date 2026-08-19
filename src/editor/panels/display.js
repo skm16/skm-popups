@@ -36,8 +36,85 @@
 
 import { createElement, Fragment } from '@wordpress/element';
 
-import { SelectControl, ToggleControl } from '@wordpress/components';
+import {
+	SelectControl,
+	TextControl,
+	ToggleControl,
+} from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+
+/**
+ * Per-popup colour overrides, matching `Meta::DISPLAY_COLOR_FIELDS`.
+ *
+ * Plain text inputs rather than `ColorPalette` or `ColorPicker`, and that is a
+ * deliberate trade rather than a shortcut. Those components have no empty state
+ * — they report a colour as soon as they are touched — so an author who opened
+ * one and changed their mind would have silently set a colour. Blank has to stay
+ * expressible, because blank is what "keep the theme" means, and the theme is
+ * the value whose contrast has actually been measured.
+ *
+ * @type {Array<{key: string, label: string}>}
+ */
+const COLORS = [
+	{ key: 'custom_background', label: __( 'Background colour', 'popkit' ) },
+	{ key: 'custom_text', label: __( 'Text colour', 'popkit' ) },
+	{ key: 'custom_accent', label: __( 'Link colour', 'popkit' ) },
+	{ key: 'custom_border_color', label: __( 'Border colour', 'popkit' ) },
+];
+
+/**
+ * Non-colour overrides, matching `Meta::DISPLAY_SCALE_FIELDS`.
+ *
+ * Steps on a scale rather than measurements, so nothing an author picks is ever
+ * parsed as CSS and the stylesheet keeps deciding what a step looks like.
+ *
+ * @type {Array<{key: string, label: string, options: Array<{value: string, label: string}>}>}
+ */
+const SCALES = [
+	{
+		key: 'custom_border_width',
+		label: __( 'Border width', 'popkit' ),
+		options: [
+			{ value: 'inherit', label: __( 'Theme default', 'popkit' ) },
+			{ value: 'none', label: __( 'None', 'popkit' ) },
+			{ value: 'thin', label: __( 'Thin', 'popkit' ) },
+			{ value: 'medium', label: __( 'Medium', 'popkit' ) },
+			{ value: 'thick', label: __( 'Thick', 'popkit' ) },
+		],
+	},
+	{
+		key: 'custom_radius',
+		label: __( 'Corner rounding', 'popkit' ),
+		options: [
+			{ value: 'inherit', label: __( 'Theme default', 'popkit' ) },
+			{ value: 'none', label: __( 'Square', 'popkit' ) },
+			{ value: 'small', label: __( 'Slightly rounded', 'popkit' ) },
+			{ value: 'medium', label: __( 'Rounded', 'popkit' ) },
+			{ value: 'large', label: __( 'Very rounded', 'popkit' ) },
+		],
+	},
+	{
+		key: 'custom_font',
+		label: __( 'Font', 'popkit' ),
+		options: [
+			{ value: 'inherit', label: __( 'Follow the page', 'popkit' ) },
+			{ value: 'system', label: __( 'System', 'popkit' ) },
+			{ value: 'serif', label: __( 'Serif', 'popkit' ) },
+			{ value: 'sans', label: __( 'Sans serif', 'popkit' ) },
+			{ value: 'mono', label: __( 'Monospace', 'popkit' ) },
+		],
+	},
+	{
+		key: 'custom_font_size',
+		label: __( 'Text size', 'popkit' ),
+		options: [
+			{ value: 'inherit', label: __( 'Follow the page', 'popkit' ) },
+			{ value: 'small', label: __( 'Small', 'popkit' ) },
+			{ value: 'medium', label: __( 'Medium', 'popkit' ) },
+			{ value: 'large', label: __( 'Large', 'popkit' ) },
+		],
+	},
+];
 
 /**
  * Positions each layout allows, matching `Meta::DISPLAY_POSITIONS`.
@@ -52,6 +129,7 @@ const POSITIONS = {
 	banner: [
 		{ value: 'top', label: __( 'Top of the page', 'popkit' ) },
 		{ value: 'bottom', label: __( 'Bottom of the page', 'popkit' ) },
+		{ value: 'lower_third', label: __( 'Lower third', 'popkit' ) },
 	],
 };
 
@@ -198,6 +276,44 @@ export function DisplayPanel( { display, onChange } ) {
 					onChange( { ...display, animation } )
 				}
 			/>
+
+			{ COLORS.map( ( { key, label } ) => (
+				<TextControl
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+					key={ key }
+					label={ label }
+					help={ __(
+						'A hex value such as #ffffff. Leave blank to keep the theme’s own colour.',
+						'popkit'
+					) }
+					value={ display?.[ key ] ?? '' }
+					onChange={ ( value ) =>
+						onChange( { ...display, [ key ]: value } )
+					}
+				/>
+			) ) }
+
+			{ SCALES.map( ( { key, label, options } ) => (
+				<SelectControl
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+					key={ key }
+					label={ label }
+					value={ display?.[ key ] ?? 'inherit' }
+					options={ options }
+					onChange={ ( value ) =>
+						onChange( { ...display, [ key ]: value } )
+					}
+				/>
+			) ) }
+
+			<p className="popkit-panel__note">
+				{ __(
+					'Check the contrast between your background and text colours before publishing. The shipped themes are measured against WCAG AA; a pair you choose is not.',
+					'popkit'
+				) }
+			</p>
 		</div>
 	);
 }

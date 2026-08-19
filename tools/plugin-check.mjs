@@ -219,9 +219,9 @@ const staged = spawnSync(
 
 if ( 0 !== staged.status ) {
 	fail(
-		`could not stage the release tree (build-zip.mjs exited ${ staged.status }). Plugin Check has nothing to inspect.\n${
-			staged.stdout ?? ''
-		}`
+		`could not stage the release tree (build-zip.mjs exited ${
+			staged.status
+		}). Plugin Check has nothing to inspect.\n${ staged.stdout ?? '' }`
 	);
 }
 

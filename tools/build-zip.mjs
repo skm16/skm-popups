@@ -239,7 +239,12 @@ for ( const required of REQUIRED ) {
 }
 
 if ( STAGE_ONLY ) {
-	say( `staged tree verified at ${ path.relative( ROOT, STAGE ) }; skipping zip.` );
+	say(
+		`staged tree verified at ${ path.relative(
+			ROOT,
+			STAGE
+		) }; skipping zip.`
+	);
 	process.exit( 0 );
 }
 

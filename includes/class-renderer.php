@@ -221,6 +221,31 @@ final class Renderer {
 	private const HEADING_TAGS = array( 'H1', 'H2', 'H3', 'H4', 'H5', 'H6' );
 
 	/**
+	 * Which custom property each stored colour override feeds.
+	 *
+	 * Mapped explicitly rather than derived from the field name. The stored names
+	 * describe what an author is choosing — a background, the text — and the token
+	 * names describe the design system the shipped themes are written against, so
+	 * `custom_background` feeds `--popkit-surface`. Deriving one from the other
+	 * would tie the data model to the stylesheet's vocabulary and make renaming
+	 * either one a migration.
+	 *
+	 * Feeding the *same* tokens the themes set is what makes an override work
+	 * everywhere without a second set of rules: one declaration in `frontend.css`
+	 * reads `--popkit-surface` and neither knows nor cares whether a theme or an
+	 * author put the value there.
+	 *
+	 * @since 0.1.0
+	 * @var array<string, string>
+	 */
+	private const COLOR_TOKENS = array(
+		'custom_background'   => '--popkit-surface',
+		'custom_text'         => '--popkit-on-surface',
+		'custom_accent'       => '--popkit-accent',
+		'custom_border_color' => '--popkit-border',
+	);
+
+	/**
 	 * The close button's icon.
 	 *
 	 * Inline SVG rather than an icon font or a background image: it inherits
@@ -304,6 +329,8 @@ final class Renderer {
 			 */
 			'tabindex'              => '-1',
 		);
+
+		$attributes += self::customisation( $display );
 
 		if ( $is_banner ) {
 			$attributes['role']   = self::BANNER_ROLE;
@@ -490,6 +517,76 @@ final class Renderer {
 			'labelledby' => null,
 			'label'      => self::fallback_label( $popup ),
 		);
+	}
+
+	/**
+	 * Builds the per-popup appearance overrides.
+	 *
+	 * Two different mechanisms, chosen for two different reasons.
+	 *
+	 * **Scales become data attributes.** `border`, `radius`, `font` and
+	 * `font-size` are stored as steps on a scale rather than as measurements, so
+	 * what a step *means* belongs in the stylesheet with the rest of the design.
+	 * A popup stores `thick`; `frontend.css` decides what `thick` is, and can
+	 * change its mind in a later release without rewriting anybody's popups.
+	 *
+	 * **Colours become inline custom properties.** A colour has no scale to be a
+	 * step on, so it has to travel as a literal. It is written as a custom
+	 * property rather than as a real declaration so it feeds the same tokens the
+	 * shipped themes set, which means one rule in the stylesheet keeps working
+	 * whether the colour came from a theme or from an author.
+	 *
+	 * Nothing here is safe by convention. `Meta::sanitize_color()` reduces these
+	 * four values to `#rgb` or `#rrggbb` and to nothing else, precisely because
+	 * this is the point where they enter a `style` attribute — and a value that
+	 * could contain `;` would close its declaration and open one popkit did not
+	 * write. `esc_attr()` in {@see self::attributes()} escapes the quote that
+	 * would end the attribute; it does not and cannot make CSS safe.
+	 *
+	 * Cache safety is untouched: every value is a property of the popup, read
+	 * from post meta, identical for every visitor who receives this URL.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param array<string, mixed> $display Stored display settings.
+	 * @return array<string, string> Extra root attributes, empty when nothing is overridden.
+	 */
+	private static function customisation( array $display ): array {
+		$attributes = array();
+
+		foreach ( Meta::DISPLAY_SCALE_FIELDS as $field => $scale ) {
+			$value = self::choice( $display, $field, $scale, 'inherit' );
+
+			// `inherit` is the absence of an override, so it earns no attribute.
+			if ( 'inherit' === $value ) {
+				continue;
+			}
+
+			$attributes[ 'data-popkit-' . str_replace( array( 'custom_', '_' ), array( '', '-' ), $field ) ] = $value;
+		}
+
+		$declarations = array();
+
+		foreach ( self::COLOR_TOKENS as $field => $token ) {
+			$value = isset( $display[ $field ] ) ? (string) $display[ $field ] : '';
+
+			// Re-validated at the point of use rather than trusted from storage:
+			// this array can reach here from a filter, or from meta written before
+			// the sanitizer knew about these fields.
+			$value = (string) sanitize_hex_color( $value );
+
+			if ( '' === $value ) {
+				continue;
+			}
+
+			$declarations[] = $token . ':' . $value;
+		}
+
+		if ( array() !== $declarations ) {
+			$attributes['style'] = implode( ';', $declarations );
+		}
+
+		return $attributes;
 	}
 
 	/**
