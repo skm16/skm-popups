@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: PopKit 0.1.0\n"
+"Project-Id-Version: PopKit 0.2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/popkit\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-19T11:13:45+00:00\n"
+"POT-Creation-Date: 2026-08-19T12:01:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: popkit\n"
@@ -43,200 +43,208 @@ msgstr ""
 msgid "PopKit could not be activated"
 msgstr ""
 
-#: includes/class-classic-editor.php:109
+#: includes/class-classic-editor.php:134
 msgid "PopKit — Targeting"
 msgstr ""
 
-#: includes/class-classic-editor.php:118
+#: includes/class-classic-editor.php:143
 msgid "PopKit — Triggers, schedule and frequency"
 msgstr ""
 
-#: includes/class-classic-editor.php:127
+#: includes/class-classic-editor.php:152
 msgid "PopKit — Appearance"
 msgstr ""
 
-#: includes/class-classic-editor.php:176
+#: includes/class-classic-editor.php:205
 msgid "Rules inside a group must all match. Any one group matching is enough. A popup with no rules shows everywhere."
 msgstr ""
 
-#: includes/class-classic-editor.php:186
+#: includes/class-classic-editor.php:215
 #: src/editor/panels/conditions.js:403
 msgid "Add group"
 msgstr ""
 
-#: includes/class-classic-editor.php:215
+#: includes/class-classic-editor.php:244
 msgid "Group"
 msgstr ""
 
-#: includes/class-classic-editor.php:224
+#: includes/class-classic-editor.php:253
 #: src/editor/panels/conditions.js:365
 msgid "Add rule"
 msgstr ""
 
-#: includes/class-classic-editor.php:225
+#: includes/class-classic-editor.php:254
 msgid "Remove group"
 msgstr ""
 
-#: includes/class-classic-editor.php:252
+#: includes/class-classic-editor.php:281
 #: src/editor/panels/conditions.js:86
 msgid "Condition"
 msgstr ""
 
-#: includes/class-classic-editor.php:254
+#: includes/class-classic-editor.php:283
 #: includes/class-classic-fields.php:344
 #: src/editor/controls.js:449
 msgid "— Select —"
 msgstr ""
 
 #. translators: %s: stored condition key whose plugin is not active.
-#: includes/class-classic-editor.php:274
+#: includes/class-classic-editor.php:303
 #, php-format
 msgid "%s (unavailable)"
 msgstr ""
 
-#: includes/class-classic-editor.php:292
+#: includes/class-classic-editor.php:321
 msgid "The plugin providing this condition is not active, so this rule cannot be evaluated and the popup will not display. Its settings are kept, and reactivating the plugin restores it exactly."
 msgstr ""
 
-#: includes/class-classic-editor.php:302
+#: includes/class-classic-editor.php:331
 msgid "Invert this rule (match when it does not apply)"
 msgstr ""
 
-#: includes/class-classic-editor.php:332
+#: includes/class-classic-editor.php:361
 msgid "Remove rule"
 msgstr ""
 
-#: includes/class-classic-editor.php:377
+#: includes/class-classic-editor.php:406
 msgid "Triggers"
 msgstr ""
 
-#: includes/class-classic-editor.php:378
+#: includes/class-classic-editor.php:407
 msgid "The first trigger to fire opens the popup; the rest are torn down."
 msgstr ""
 
-#: includes/class-classic-editor.php:421
+#: includes/class-classic-editor.php:450
 msgid "Schedule"
 msgstr ""
 
-#: includes/class-classic-editor.php:429
+#: includes/class-classic-editor.php:458
 msgid "Only show between a start and end date"
 msgstr ""
 
-#: includes/class-classic-editor.php:440
+#: includes/class-classic-editor.php:469
 msgid "Start"
 msgstr ""
 
-#: includes/class-classic-editor.php:451
+#: includes/class-classic-editor.php:480
 msgid "End"
 msgstr ""
 
-#: includes/class-classic-editor.php:463
+#: includes/class-classic-editor.php:492
 msgid "Interpret those times in"
 msgstr ""
 
-#: includes/class-classic-editor.php:481
+#: includes/class-classic-editor.php:510
 msgid "Frequency"
 msgstr ""
 
-#: includes/class-classic-editor.php:490
+#: includes/class-classic-editor.php:519
 msgid "How often a visitor may see this popup"
 msgstr ""
 
-#: includes/class-classic-editor.php:502
+#: includes/class-classic-editor.php:531
 msgid "Days between showings, when the mode above uses them"
 msgstr ""
 
-#: includes/class-classic-editor.php:514
+#: includes/class-classic-editor.php:543
 msgid "After the visitor completes the popup"
 msgstr ""
 
-#: includes/class-classic-editor.php:537
+#: includes/class-classic-editor.php:566
 #: src/editor/panels/display.js:154
 msgid "Layout"
 msgstr ""
 
-#: includes/class-classic-editor.php:541
-#: src/editor/panels/display.js:209
-msgid "Position"
-msgstr ""
-
-#: includes/class-classic-editor.php:545
+#: includes/class-classic-editor.php:570
 #: src/editor/panels/display.js:178
 msgid "Theme"
 msgstr ""
 
-#: includes/class-classic-editor.php:549
+#: includes/class-classic-editor.php:574
 #: src/editor/panels/display.js:195
 msgid "Size"
 msgstr ""
 
-#: includes/class-classic-editor.php:553
+#: includes/class-classic-editor.php:578
 #: src/editor/panels/display.js:264
 msgid "Animation"
 msgstr ""
 
-#: includes/class-classic-editor.php:572
+#: includes/class-classic-editor.php:597
 msgid "Dim the page behind a modal"
 msgstr ""
 
-#: includes/class-classic-editor.php:573
+#: includes/class-classic-editor.php:598
 msgid "Clicking the dimmed area closes the popup"
 msgstr ""
 
-#: includes/class-classic-editor.php:588
+#: includes/class-classic-editor.php:615
 msgid "The close button is always rendered and cannot be turned off. An overlay click and the Escape key are additional ways to dismiss a popup, never the only ones."
 msgstr ""
 
-#: includes/class-classic-editor.php:610
+#: includes/class-classic-editor.php:646
+msgid "Modal positions"
+msgstr ""
+
+#: includes/class-classic-editor.php:647
+msgid "Notification bar positions"
+msgstr ""
+
+#: includes/class-classic-editor.php:652
+#: src/editor/panels/display.js:209
+msgid "Position"
+msgstr ""
+
+#: includes/class-classic-editor.php:690
 #: src/editor/panels/display.js:59
 msgid "Background colour"
 msgstr ""
 
-#: includes/class-classic-editor.php:611
+#: includes/class-classic-editor.php:691
 #: src/editor/panels/display.js:60
 msgid "Text colour"
 msgstr ""
 
-#: includes/class-classic-editor.php:612
+#: includes/class-classic-editor.php:692
 #: src/editor/panels/display.js:61
 msgid "Link colour"
 msgstr ""
 
-#: includes/class-classic-editor.php:613
+#: includes/class-classic-editor.php:693
 #: src/editor/panels/display.js:62
 msgid "Border colour"
 msgstr ""
 
-#: includes/class-classic-editor.php:616
+#: includes/class-classic-editor.php:696
 msgid "Customise this popup"
 msgstr ""
 
-#: includes/class-classic-editor.php:618
+#: includes/class-classic-editor.php:698
 msgid "Leave a colour blank to keep the theme’s own. Check the contrast between your background and text colours before publishing — the shipped themes are measured, a custom pair is not."
 msgstr ""
 
 #. translators: %s: name of the colour being set, e.g. "Background colour".
-#: includes/class-classic-editor.php:630
+#: includes/class-classic-editor.php:710
 #, php-format
 msgid "%s — hex value such as #ffffff, or blank for the theme"
 msgstr ""
 
-#: includes/class-classic-editor.php:637
+#: includes/class-classic-editor.php:717
 #: src/editor/panels/display.js:76
 msgid "Border width"
 msgstr ""
 
-#: includes/class-classic-editor.php:638
+#: includes/class-classic-editor.php:718
 #: src/editor/panels/display.js:87
 msgid "Corner rounding"
 msgstr ""
 
-#: includes/class-classic-editor.php:639
+#: includes/class-classic-editor.php:719
 #: src/editor/panels/display.js:98
 msgid "Font"
 msgstr ""
 
-#: includes/class-classic-editor.php:640
+#: includes/class-classic-editor.php:720
 #: src/editor/panels/display.js:109
 msgid "Text size"
 msgstr ""
@@ -393,12 +401,12 @@ msgstr ""
 msgid "A condition is already registered under the key \"%s\". Condition keys must be unique."
 msgstr ""
 
-#: includes/class-editor.php:254
+#: includes/class-editor.php:261
 msgid "The PopKit editor panels could not be loaded."
 msgstr ""
 
 #. translators: 1: build command to run, 2: path of the missing file, relative to the plugin directory.
-#: includes/class-editor.php:258
+#: includes/class-editor.php:265
 #, php-format
 msgid "This popup can still be edited, but its targeting, triggers, schedule, frequency and display settings are unavailable until the plugin is built. Run %1$s in the plugin directory to generate %2$s, then reload this screen."
 msgstr ""

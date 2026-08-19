@@ -127,12 +127,11 @@ values so reactivating restores the popup exactly.
 3. Go to **Popups > Add Popup**, write the content as blocks, and configure
    targeting, triggers, schedule, frequency and appearance in the sidebar.
 
-**Running Classic Editor?** Popups still open in the block editor, because a
-popup's content *is* blocks — your posts and pages are left exactly as you have
-configured them. If you would rather author popups in the classic screen too,
-add this and PopKit renders the same panels as meta boxes instead:
-
-`add_filter( 'popkit_use_block_editor', '__return_false' );`
+**Running Classic Editor?** Then so are your popups. PopKit follows whichever
+editor your site already uses and renders the same five panels either way — as
+sidebar panels in the block editor, or as meta boxes in the classic one. It
+registers no editor filter of its own, so your configuration is not just
+honoured, it is untouched.
 
 Requires WordPress 6.5 and PHP 8.1. Both are checked on activation, and the
 plugin refuses to load with an explanatory notice rather than a fatal error if
@@ -198,15 +197,20 @@ no script tag, no stylesheet, no inline configuration, no markup.
 
 = Does it work with Classic Editor? =
 
-Yes. Popups open in the block editor even when Classic Editor is replacing it
-site-wide, because a popup's content is blocks and authoring blocks in a
-textarea is not authoring blocks. Nothing else on your site changes: posts and
-pages keep whichever editor you chose.
+Yes, and it does not fight it. Popups open in whichever editor your site uses.
+Targeting, triggers, schedule, frequency and appearance appear as meta boxes on
+the classic screen and as sidebar panels in the block editor, built from the same
+definitions, so a condition added by another plugin shows up on both.
 
-If you want popups in the classic screen as well, add
-`add_filter( 'popkit_use_block_editor', '__return_false' );` and the same five
-panels render as meta boxes. Exactly one of the two interfaces is ever active,
-so a popup's settings can never depend on which screen saved it last.
+Exactly one of the two interfaces is ever active, so a popup's settings can never
+depend on which screen saved it last.
+
+To override your site's choice for popups only:
+
+`add_filter( 'popkit_use_block_editor', '__return_true' );`  — always block editor
+`add_filter( 'popkit_use_block_editor', '__return_false' );` — always classic editor
+
+Leave the filter alone and PopKit adds no editor filters at all.
 
 = Is there a limit to how many popups I can have? =
 
@@ -358,11 +362,13 @@ and the block editor's own checks cover the content.
 == Changelog ==
 
 = 0.2.0 =
-* Popups now open in the block editor even when Classic Editor is active
-  site-wide. Previously the popup screen showed a content field and none of the
-  settings, with nothing to say why.
-* Added a classic-editor interface, for sites that would rather author popups
-  there. Enable it with `add_filter( 'popkit_use_block_editor', '__return_false' );`.
+* Added a classic-editor interface. Targeting, triggers, schedule, frequency and
+  appearance now render as meta boxes, built from the same definitions as the
+  block editor sidebar. Previously a site running Classic Editor got a content
+  field and none of the settings, with nothing on screen to say why.
+* PopKit now follows whichever editor your site already uses, and registers no
+  editor filter of its own. Override it for popups alone with
+  `add_filter( 'popkit_use_block_editor', '__return_true' );` or `'__return_false'`.
 * Added per-popup appearance overrides: background, text, link and border
   colours, plus border width, corner rounding, font and text size.
 * Added a **lower third** position for the notification bar layout.

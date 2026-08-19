@@ -8,9 +8,12 @@
  * triggers, schedule, frequency or appearance controls at all — every setting
  * unreachable, with no error to say so.
  *
- * Two things fix it and both are tested here: popups opt back into the block
- * editor by default even under Classic Editor ({@see Popkit\Editor_Mode}), and a
- * site that declines that gets real meta boxes ({@see Popkit\Classic_Editor}).
+ * The fix is that PopKit follows whichever editor the site already uses
+ * ({@see Popkit\Editor_Mode}) and renders the same five panels as meta boxes when
+ * that is the classic one ({@see Popkit\Classic_Editor}). Both halves are tested
+ * here, including the two ways the first attempt got it wrong: overriding the
+ * site's choice rather than following it, and stating the preference on a hook
+ * that does not decide.
  *
  * ## What these tests are really guarding
  *
@@ -56,16 +59,19 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 		parent::set_up();
 
 		/*
-		 * Every callback in Classic_Editor asks Editor_Mode first and returns if
-		 * the block editor is in use — which is the default. So a test of the
-		 * classic surface has to put the site into the state where that surface is
-		 * the one that runs, exactly as a real site would.
+		 * Put the site in the state where the classic surface is the one that runs.
+		 * Without it these tests pass vacuously, asserting that nothing happened
+		 * while believing they asserted that the right thing happened.
 		 *
-		 * This is not test scaffolding working around the code: without it these
-		 * tests pass vacuously, asserting that nothing happened while believing
-		 * they asserted that the right thing happened.
+		 * `Editor_Mode::init()` is called again afterwards on purpose. It reads the
+		 * filter once, at boot, and attaches nothing when nobody has an opinion — so
+		 * a filter added after boot registers no override, exactly as it would on a
+		 * real site where the filter has to be in place before `plugins_loaded`.
+		 * Adding the filter without re-initialising would test a configuration no
+		 * site can actually have.
 		 */
 		add_filter( 'popkit_use_block_editor', '__return_false' );
+		Editor_Mode::init();
 
 		Capabilities::assign();
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
@@ -88,37 +94,172 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 		$_POST = array();
 
 		remove_filter( 'popkit_use_block_editor', '__return_false' );
+
+		// Leave the hook table as it was found: these are attached by init() above
+		// and would otherwise decide the editor for every test that runs after.
+		remove_filter( 'use_block_editor_for_post', array( Editor_Mode::class, 'filter_post' ), 1000 );
+		remove_filter( 'use_block_editor_for_post_type', array( Editor_Mode::class, 'filter_post_type' ), 1000 );
+		remove_filter( 'classic_editor_enabled_editors_for_post_type', array( Editor_Mode::class, 'filter_classic_editor' ), 1000 );
+
 		Capabilities::remove();
 
 		parent::tear_down();
 	}
 
 	/**
-	 * Popups use the block editor by default, whatever the site chose.
+	 * By default PopKit registers no editor filter and follows the site.
 	 *
-	 * The value handed in is `false` — what the Classic Editor plugin passes when
-	 * it is replacing the block editor site-wide. Popups override it; nothing
-	 * else does.
+	 * The reversal of the original design. Forcing the block editor for popups
+	 * overrode a decision the site owner had already made, on the reasoning that a
+	 * popup's content is blocks — true of the data model and beside the point,
+	 * since `post_content` is stored and rendered identically whichever screen
+	 * wrote it. What PopKit owes a site is that the settings appear on the screen
+	 * it chose, not that it chooses the screen.
+	 *
+	 * Asserted as the *absence* of hooks rather than as a return value: "follows
+	 * the site" means the hook table is one PopKit never touched, and a test that
+	 * only checked the outcome would still pass if PopKit overrode the site to the
+	 * same answer by luck.
 	 *
 	 * @return void
 	 */
-	public function test_popups_opt_back_into_the_block_editor() {
-		// set_up() puts the site in classic mode for the rest of this file. This
-		// one test is about the default, so it takes that back off.
-		remove_filter( 'popkit_use_block_editor', '__return_false' );
+	public function test_by_default_popkit_does_not_touch_the_sites_editor() {
+		$this->forget_override();
 
-		$this->assertTrue(
-			Editor_Mode::filter_post_type( false, Post_Type::POST_TYPE ),
-			'A popup is authored as blocks, so it opts back into the block editor.'
+		$this->assertNull( Editor_Mode::forced(), 'The default is no opinion.' );
+
+		Editor_Mode::init();
+
+		$this->assertFalse(
+			has_filter( 'use_block_editor_for_post', array( Editor_Mode::class, 'filter_post' ) ),
+			'With no opinion, PopKit must not filter the per-post decision.'
 		);
 		$this->assertFalse(
-			Editor_Mode::filter_post_type( false, 'page' ),
-			"Another post type keeps the site's own answer, untouched."
+			has_filter( 'use_block_editor_for_post_type', array( Editor_Mode::class, 'filter_post_type' ) ),
+			'Nor the per-post-type one.'
 		);
+	}
+
+	/**
+	 * A site that uses the classic editor gets popups in the classic editor.
+	 *
+	 * The behaviour the reversal exists for, expressed the way a real site
+	 * produces it: something else forces the classic editor, and PopKit follows
+	 * rather than fighting.
+	 *
+	 * @return void
+	 */
+	public function test_popkit_follows_a_site_that_uses_the_classic_editor() {
+		$this->forget_override();
+
+		// The Classic Editor plugin's default configuration, reproduced exactly.
+		add_filter( 'use_block_editor_for_post', '__return_false', 100 );
+
+		$popup = get_post( $this->popup );
+
+		$this->assertFalse(
+			Editor_Mode::resolved_for_post( $popup ),
+			'PopKit must not drag a classic site into the block editor.'
+		);
+
+		$GLOBALS['wp_meta_boxes'] = array();
+
+		Classic_Editor::register_meta_boxes( $popup );
+
+		$this->assertNotSame(
+			array(),
+			$GLOBALS['wp_meta_boxes'],
+			'And the settings have to be on the screen the site actually serves.'
+		);
+
+		remove_filter( 'use_block_editor_for_post', '__return_false', 100 );
+		$GLOBALS['wp_meta_boxes'] = array();
+	}
+
+	/**
+	 * The preference survives a plugin forcing the classic editor per post.
+	 *
+	 * The regression test for the bug that shipped. `use_block_editor_for_post_type`
+	 * is not the final word: core calls it from `use_block_editor_for_post()` and
+	 * then filters *that*, so anything hooking the per-post filter overrules it.
+	 *
+	 * The Classic Editor plugin does exactly this, and by the route that is easy
+	 * to miss — on its default settings it hooks `__return_false` straight onto
+	 * `use_block_editor_for_post` at priority 100, never consulting the
+	 * settings-aware `choose_editor()` that would have let popups through. Filtering
+	 * only the post-type hook produced a popup screen served by the classic editor
+	 * while the classic meta boxes, trusting popkit's own preference, stood down.
+	 * No error, no notice — a popup with nowhere to configure anything.
+	 *
+	 * `__return_false` at 100 is that plugin's behaviour reproduced exactly.
+	 *
+	 * @return void
+	 */
+	public function test_the_block_editor_preference_beats_a_per_post_override() {
+		$this->forget_override();
+		add_filter( 'popkit_use_block_editor', '__return_true' );
+		Editor_Mode::init();
+
+		add_filter( 'use_block_editor_for_post', '__return_false', 100 );
+
 		$this->assertTrue(
-			Editor_Mode::filter_post_type( true, 'page' ),
-			'In both directions.'
+			use_block_editor_for_post( get_post( $this->popup ) ),
+			'A plugin forcing the classic editor per post must not strand a popup with neither interface.'
 		);
+
+		$page = self::factory()->post->create( array( 'post_type' => 'page' ) );
+
+		$this->assertFalse(
+			use_block_editor_for_post( get_post( $page ) ),
+			"Every other post type keeps the site's own answer."
+		);
+
+		remove_filter( 'use_block_editor_for_post', '__return_false', 100 );
+		remove_filter( 'popkit_use_block_editor', '__return_true' );
+	}
+
+	/**
+	 * The surfaces follow what WordPress resolved, not what popkit preferred.
+	 *
+	 * The second half of the same bug. Even with the filter above in place, gating
+	 * the meta boxes on popkit's *preference* means that any future disagreement
+	 * about which editor loads takes the settings interface down with it. Gating on
+	 * the resolved answer bounds the damage: the panels can end up on the other
+	 * screen, never on neither.
+	 *
+	 * @return void
+	 */
+	public function test_the_meta_boxes_follow_the_resolved_editor() {
+		$this->forget_override();
+
+		$popup = get_post( $this->popup );
+
+		$this->assertTrue(
+			Editor_Mode::resolved_for_post( $popup ),
+			'Precondition: this test environment has no classic editor, so popups resolve to the block editor.'
+		);
+
+		// Something outside popkit forces the classic screen for this post, at a
+		// priority popkit cannot outrun.
+		add_filter( 'use_block_editor_for_post', '__return_false', 99999 );
+
+		$this->assertFalse(
+			Editor_Mode::resolved_for_post( $popup ),
+			'The resolved answer has to reflect what actually happened.'
+		);
+
+		$GLOBALS['wp_meta_boxes'] = array();
+
+		Classic_Editor::register_meta_boxes( $popup );
+
+		$this->assertNotSame(
+			array(),
+			$GLOBALS['wp_meta_boxes'],
+			'When the classic screen is served, the classic boxes must render — whoever decided that.'
+		);
+
+		remove_filter( 'use_block_editor_for_post', '__return_false', 99999 );
+		$GLOBALS['wp_meta_boxes'] = array();
 	}
 
 	/**
@@ -565,6 +706,18 @@ final class Test_Popkit_Classic_Editor extends WP_UnitTestCase {
 			$GLOBALS['wp_meta_boxes'],
 			'The classic boxes must not appear alongside the block editor sidebar.'
 		);
+	}
+
+	/**
+	 * Returns the site to "PopKit has no opinion", as set_up() left it otherwise.
+	 *
+	 * @return void
+	 */
+	private function forget_override() {
+		remove_filter( 'popkit_use_block_editor', '__return_false' );
+		remove_filter( 'use_block_editor_for_post', array( Editor_Mode::class, 'filter_post' ), 1000 );
+		remove_filter( 'use_block_editor_for_post_type', array( Editor_Mode::class, 'filter_post_type' ), 1000 );
+		remove_filter( 'classic_editor_enabled_editors_for_post_type', array( Editor_Mode::class, 'filter_classic_editor' ), 1000 );
 	}
 
 	/**

@@ -185,14 +185,22 @@ final class Editor {
 	 * @return void
 	 */
 	public static function enqueue_assets(): void {
-		// The classic surface owns this screen when a site has declined the block
-		// editor for popups. Asked here rather than at boot so a filter added from a
-		// theme — after `plugins_loaded` — still decides. See Editor_Mode.
-		if ( ! Editor_Mode::uses_block_editor() ) {
+		if ( ! self::is_popup_editor_screen() ) {
 			return;
 		}
 
-		if ( ! self::is_popup_editor_screen() ) {
+		/*
+		 * On a site whose popups are authored in the classic editor,
+		 * {@see Classic_Editor} owns this popup and the sidebar must not load —
+		 * two surfaces writing the same meta is how a popup's settings start
+		 * depending on which screen saved last.
+		 *
+		 * Asked here rather than at boot, because `Plugin::boot()` runs on
+		 * `plugins_loaded` and a theme's `functions.php` is read afterwards. And
+		 * asked of the *resolved* editor rather than of popkit's preference: see
+		 * Editor_Mode for what happened the one time those two disagreed.
+		 */
+		if ( ! Editor_Mode::resolved_for_post( get_post() ) ) {
 			return;
 		}
 

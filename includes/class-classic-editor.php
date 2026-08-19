@@ -13,15 +13,27 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Renders and saves the five popup panels as classic-editor meta boxes.
  *
- * Every callback here begins by asking {@see Editor_Mode::uses_block_editor()}
- * and returns immediately if the answer is yes, so this and {@see Editor} are
- * never both live. Two surfaces writing the same post meta is how a popup ends
- * up with settings that depend on which screen saved last.
+ * Every callback here begins by asking {@see Editor_Mode::resolved_for_post()}
+ * and returns immediately if this popup is being authored in the block editor,
+ * so this and {@see Editor} are never both live. Two surfaces writing the same
+ * post meta is how a popup ends up with settings that depend on which screen
+ * saved last.
  *
- * The check is at callback time rather than at boot, because `Plugin::boot()`
- * runs on `plugins_loaded` and a theme's `functions.php` is read afterwards — a
- * site adding the `popkit_use_block_editor` filter where a site owner would most
- * naturally add it would otherwise have had no effect, and no error.
+ * Two details of that check are load bearing, and both were learned the hard way
+ * on a real installation.
+ *
+ * It asks at **callback time**, not at boot: `Plugin::boot()` runs on
+ * `plugins_loaded` and a theme's `functions.php` is read afterwards, so a site
+ * adding the `popkit_use_block_editor` filter where a site owner would most
+ * naturally add it would otherwise have had no effect and no error.
+ *
+ * And it asks what WordPress **resolved**, not what popkit preferred. Those came
+ * apart once already — the preference was expressed on a hook that did not
+ * decide, so the Classic Editor plugin served the classic screen while these
+ * boxes, believing the block editor had won, declined to render. The result was
+ * a popup with no settings interface of any kind. Gating on the resolved answer
+ * means the worst a future disagreement can do is put the panels on the other
+ * screen rather than on neither.
  *
  * ## Sanitization is not reimplemented here
  *
@@ -107,10 +119,13 @@ final class Classic_Editor {
 	 *
 	 * @since 0.1.0
 	 *
+	 * @param \WP_Post|null $post Popup being edited, as `add_meta_boxes_{$post_type}` passes it.
 	 * @return void
 	 */
-	public static function register_meta_boxes(): void {
-		if ( Editor_Mode::uses_block_editor() ) {
+	public static function register_meta_boxes( $post = null ): void {
+		// The real decision for this post, not popkit's preference. `add_meta_boxes`
+		// fires in the block editor too, for its compatibility layer.
+		if ( Editor_Mode::resolved_for_post( $post ) ) {
 			return;
 		}
 
@@ -151,7 +166,7 @@ final class Classic_Editor {
 	 * @return void
 	 */
 	public static function enqueue_assets( $hook_suffix ): void {
-		if ( Editor_Mode::uses_block_editor() ) {
+		if ( Editor_Mode::resolved_for_post( get_post() ) ) {
 			return;
 		}
 
@@ -730,7 +745,7 @@ final class Classic_Editor {
 	 * @return void
 	 */
 	public static function save( $post_id, $post ): void {
-		if ( Editor_Mode::uses_block_editor() ) {
+		if ( Editor_Mode::resolved_for_post( $post ) ) {
 			return;
 		}
 

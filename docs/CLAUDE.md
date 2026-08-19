@@ -322,7 +322,24 @@ CLIENT (varies by visitor)
   sanitization. JS supplies only the `evaluate` function.
 - Registering a condition or trigger must require zero React. If a new field type
   needs a control that does not exist, add it to the shared control map — do not
-  let registrations ship their own UI.
+  let registrations ship their own UI. There are **two** control maps, one per
+  authoring surface (`src/editor/controls.js`, `Popkit\Classic_Fields`), and both
+  render from the same schema. A control added to `Condition::FIELD_CONTROLS`
+  needs a case in each, or it renders on one screen and silently not the other.
+- **Two authoring surfaces, exactly one mounted.** The block editor sidebar and
+  the classic meta boxes write the same post meta, so both live would make a
+  popup's settings depend on which screen saved last. `Popkit\Editor_Mode` is the
+  single place that decides, and it decides by *following the site*: it registers
+  no editor filter unless `popkit_use_block_editor` returns a boolean.
+  - Gate on what WordPress **resolved** for the post, never on what popkit
+    *prefers*. Those came apart once — the preference was stated on
+    `use_block_editor_for_post_type`, which does not decide, so the Classic Editor
+    plugin served the classic screen while the meta boxes stood down believing the
+    block editor had won. A popup had no settings interface at all, and nothing
+    was logged. Gating on the resolved answer bounds any future disagreement to
+    "the panels are on the other screen" instead of "on neither".
+  - `use_block_editor_for_post` is the hook that decides. Filtering only the
+    post-type hook is not enough.
 - Rule negation is the `negate` flag on the rule, never a separate registered
   condition type.
 - Rule groups are OR'd; rules within a group are AND'd.
